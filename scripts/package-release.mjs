@@ -9,7 +9,16 @@ const DIST_DIR = path.join(ROOT_DIR, 'dist');
 const STAGING_DIR = path.join(DIST_DIR, 'staging');
 const RELEASE_DIR = path.join(DIST_DIR, 'release');
 
-const COMMON_PATHS = ['README.md', 'package.json', 'package-lock.json', 'batch_export.mjs', 'server.mjs', 'public', 'src', 'scripts'];
+const COMMON_PATHS = [
+  'README.md',
+  'package.json',
+  'package-lock.json',
+  'batch_export.mjs',
+  'server.mjs',
+  'public',
+  'src',
+  'scripts/launch.mjs',
+];
 
 function run(command, args, description) {
   const result = spawnSync(command, args, {
