@@ -1,4 +1,4 @@
-# SAT Exporter
+# SAT Question Bank Exporter
 
 An unofficial local-first SAT question bank exporter with a desktop-friendly web UI and a CLI fallback.
 
