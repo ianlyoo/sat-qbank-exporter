@@ -6,3 +6,4 @@ downloads/
 npm-debug.log*
 playwright-report/
 test-results/
+dist/

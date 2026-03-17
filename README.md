@@ -22,35 +22,42 @@ It lets you choose an assessment, section, domains, skills, difficulty, question
 ## Requirements
 
 - Node.js 20+
-- npm
-- Playwright Chromium browser
 
-## Setup
+## Quick Start
+
+For release builds or local zip copies:
+
+- Windows: double-click [`launch.bat`](./launch.bat)
+- macOS: double-click [`launch.command`](./launch.command)
+
+The launcher will:
+
+- warn you if Node.js is missing
+- run first-time setup automatically when dependencies or Playwright Chromium are not ready
+- start the local server
+- open the app in your browser at `http://localhost:4173`
+
+By default, exported PDFs are saved to the project's `output/` folder.
+
+## GitHub Releases
+
+Release packages can be generated with:
+
+```bash
+npm run package:release
+```
+
+That command creates platform-specific zip files in `dist/release/` for Windows and macOS.
+
+## Manual Setup
+
+If you want to run the project manually instead of using the launcher:
 
 ```bash
 npm install
-npx playwright install chromium
-```
-
-If `npx playwright install chromium` does not work in your environment, use:
-
-```bash
 node node_modules/playwright/cli.js install chromium
-```
-
-## Run The Web UI
-
-```bash
 npm start
 ```
-
-Then open:
-
-```text
-http://localhost:4173
-```
-
-By default, exported PDFs are saved to the project's `output/` folder.
 
 ## CLI Usage
 
