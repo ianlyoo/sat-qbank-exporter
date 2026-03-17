@@ -13,9 +13,11 @@ const state = {
     boot: true,
     preview: false,
     export: false,
+    clearHistory: false,
   },
   pollTimer: null,
   sessionStorageAvailable: true,
+  clearHistoryConfirm: false,
   form: {
     assessment: '',
     section: '',
@@ -25,6 +27,7 @@ const state = {
     questionCount: 20,
     chunkSize: 20,
     mode: 'student',
+    includeAnswerKey: false,
     outputDir: './output',
     shuffle: true,
     excludeActive: false,
@@ -63,10 +66,12 @@ function cacheDom() {
   dom.chunkSize = document.getElementById('chunk-size');
   dom.outputDir = document.getElementById('output-dir');
   dom.shuffle = document.getElementById('shuffle');
+  dom.includeAnswerKey = document.getElementById('include-answer-key');
   dom.excludeActive = document.getElementById('exclude-active');
   dom.excludeExported = document.getElementById('exclude-exported');
   dom.previewButton = document.getElementById('preview-button');
   dom.exportButton = document.getElementById('export-button');
+  dom.clearHistoryButton = document.getElementById('clear-history-button');
   dom.previewState = document.getElementById('preview-state');
   dom.previewMatched = document.getElementById('preview-matched');
   dom.previewExportCount = document.getElementById('preview-export-count');
@@ -123,6 +128,10 @@ function bindEvents() {
     updateForm({ shuffle: event.target.checked });
   });
 
+  dom.includeAnswerKey.addEventListener('change', (event) => {
+    updateForm({ includeAnswerKey: event.target.checked });
+  });
+
   dom.excludeActive.addEventListener('change', (event) => {
     updateForm({ excludeActive: event.target.checked });
   });
@@ -151,6 +160,23 @@ function bindEvents() {
       return;
     }
     await startExport();
+  });
+
+  dom.clearHistoryButton.addEventListener('click', async () => {
+    await handleClearHistoryClick();
+  });
+
+  document.addEventListener('pointerdown', (event) => {
+    if (!state.clearHistoryConfirm) {
+      return;
+    }
+
+    if (dom.clearHistoryButton.contains(event.target)) {
+      return;
+    }
+
+    state.clearHistoryConfirm = false;
+    renderActions();
   });
 
   dom.domainsSelectAll.addEventListener('click', () => {
@@ -204,7 +230,7 @@ async function boot() {
 
     if (state.jobId) {
       await pollStatus();
-    } else if (state.form.domains.length) {
+    } else if (isPreviewComparable(state.form)) {
       await requestPreview({ quietError: true });
     }
   } catch (error) {
@@ -231,6 +257,7 @@ function createFormFromDefaults(defaults, lookup) {
       questionCount: defaults?.questionCount ?? 20,
       chunkSize: defaults?.chunkSize ?? 20,
       mode: defaults?.mode || 'student',
+      includeAnswerKey: Boolean(defaults?.includeAnswerKey ?? false),
       outputDir: defaults?.outputDir || './output',
       shuffle: Boolean(defaults?.shuffle ?? true),
       excludeActive: Boolean(defaults?.excludeActive ?? false),
@@ -268,6 +295,7 @@ function sanitizeForm(form, options = {}) {
 
 function updateForm(patch, options = {}) {
   state.form = sanitizeForm({ ...state.form, ...patch }, options);
+  state.clearHistoryConfirm = false;
   if (state.preview) {
     state.previewStale = isPreviewComparable(state.form) && !doesPreviewMatchForm(state.preview, state.form);
   }
@@ -301,6 +329,7 @@ function doesPreviewMatchForm(preview, form) {
     'questionCount',
     'chunkSize',
     'mode',
+    'includeAnswerKey',
     'outputDir',
     'shuffle',
     'excludeActive',
@@ -359,6 +388,13 @@ function validateForm() {
 }
 
 async function requestPreview(options = {}) {
+  if (!isPreviewComparable(state.form)) {
+    state.preview = null;
+    state.previewStale = false;
+    render();
+    return;
+  }
+
   clearError();
   state.pending.preview = true;
   render();
@@ -440,6 +476,39 @@ async function startExport() {
   }
 }
 
+async function handleClearHistoryClick() {
+  clearError();
+
+  if (!state.clearHistoryConfirm) {
+    state.clearHistoryConfirm = true;
+    renderActions();
+    return;
+  }
+
+  state.clearHistoryConfirm = false;
+  state.pending.clearHistory = true;
+  renderActions();
+
+  try {
+    await fetchJson('/api/export-history/clear', {
+      method: 'POST',
+    });
+
+    if (isPreviewComparable(state.form)) {
+      await requestPreview({ quietError: true });
+    } else {
+      state.preview = null;
+      state.previewStale = false;
+      render();
+    }
+  } catch (error) {
+    setError(error.message || 'Unable to clear the local export history.');
+  } finally {
+    state.pending.clearHistory = false;
+    renderActions();
+  }
+}
+
 async function pollStatus() {
   if (!state.jobId) {
     return;
@@ -491,6 +560,7 @@ function buildPayload() {
     questionCount: Number(state.form.questionCount),
     chunkSize: Number(state.form.chunkSize),
     mode: state.form.mode,
+    includeAnswerKey: state.form.includeAnswerKey,
     outputDir: state.form.outputDir,
     shuffle: state.form.shuffle,
     excludeActive: state.form.excludeActive,
@@ -677,6 +747,7 @@ function renderInputs() {
   dom.chunkSize.value = state.form.chunkSize;
   dom.outputDir.value = state.form.outputDir;
   dom.shuffle.checked = state.form.shuffle;
+  dom.includeAnswerKey.checked = state.form.includeAnswerKey;
   dom.excludeActive.checked = state.form.excludeActive;
   dom.excludeExported.checked = state.form.excludeExported;
 
@@ -689,6 +760,7 @@ function renderInputs() {
   dom.chunkSize.disabled = disabled;
   dom.outputDir.disabled = disabled;
   dom.shuffle.disabled = disabled;
+  dom.includeAnswerKey.disabled = disabled;
   dom.excludeActive.disabled = disabled;
   dom.excludeExported.disabled = disabled;
   document.querySelectorAll('input[name="mode"]').forEach((input) => {
@@ -697,12 +769,21 @@ function renderInputs() {
 }
 
 function renderActions() {
-  const busy = state.pending.boot || state.pending.preview || state.pending.export;
+  const busy = state.pending.boot || state.pending.preview || state.pending.export || state.pending.clearHistory;
   const exportLocked = hasActiveJob();
 
   dom.reloadButton.disabled = busy;
+  dom.clearHistoryButton.disabled = busy || exportLocked;
   dom.previewButton.disabled = busy || !state.lookup;
   dom.exportButton.disabled = busy || !state.lookup || exportLocked;
+  dom.clearHistoryButton.textContent = state.pending.clearHistory
+    ? 'Clearing...'
+    : state.clearHistoryConfirm
+      ? 'Are You Sure?'
+      : 'Clear export history';
+  dom.clearHistoryButton.className = `button ${
+    state.clearHistoryConfirm ? 'button-danger button-clear-history button-clear-history-confirm' : 'button-secondary button-clear-history'
+  }`;
   dom.previewButton.textContent = state.pending.preview ? 'Previewing...' : 'Preview export';
   dom.exportButton.textContent = exportLocked
     ? 'Export in progress'
@@ -724,7 +805,7 @@ function renderPreview() {
     dom.previewExportBatches.textContent = '--';
     dom.previewAssessment.textContent = state.form.assessment || '--';
     dom.previewSection.textContent = state.form.section || '--';
-    dom.previewMode.textContent = formatMode(state.form.mode);
+    dom.previewMode.textContent = formatMode(state.form.mode, state.form.includeAnswerKey);
     dom.previewOutput.textContent = state.form.outputDir || '--';
     dom.previewAvailable.textContent = state.form.excludeExported ? '--' : 'All matched questions';
     dom.previewSkipped.textContent = state.form.excludeExported ? '--' : 'Filter off';
@@ -742,7 +823,10 @@ function renderPreview() {
   dom.previewExportBatches.textContent = formatCount(preview.exportBatches);
     dom.previewAssessment.textContent = previewConfig.assessment || state.form.assessment || '--';
     dom.previewSection.textContent = previewConfig.section || state.form.section || '--';
-    dom.previewMode.textContent = formatMode(previewConfig.mode || state.form.mode);
+    dom.previewMode.textContent = formatMode(
+      previewConfig.mode || state.form.mode,
+      previewConfig.includeAnswerKey ?? state.form.includeAnswerKey
+    );
     dom.previewOutput.textContent = preview.outputDir || state.form.outputDir || '--';
     dom.previewAvailable.textContent = formatCount(preview.availableCount);
     dom.previewSkipped.textContent = previewConfig.excludeExported
@@ -883,8 +967,13 @@ function formatCount(value) {
   return typeof value === 'number' ? value.toLocaleString() : '--';
 }
 
-function formatMode(value) {
-  return value ? `${value.charAt(0).toUpperCase()}${value.slice(1)}` : '--';
+function formatMode(value, includeAnswerKey = false) {
+  if (!value) {
+    return '--';
+  }
+
+  const label = `${value.charAt(0).toUpperCase()}${value.slice(1)}`;
+  return includeAnswerKey ? `${label} + Answer key` : label;
 }
 
 function formatState(value) {

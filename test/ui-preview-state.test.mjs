@@ -13,6 +13,7 @@ function createBaseConfig() {
     questionCount: 20,
     chunkSize: 20,
     mode: 'student',
+    includeAnswerKey: false,
     outputDir: './output',
     shuffle: true,
     excludeActive: false,

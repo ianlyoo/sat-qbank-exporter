@@ -249,6 +249,7 @@ export async function runExport(input, { onProgress } = {}) {
       const html = renderDocumentHtml({
         batch: printableBatch,
         mode: prepared.config.mode,
+        includeAnswerKey: prepared.config.includeAnswerKey,
         headerText: createHeaderText({
           assessment: prepared.config.assessment,
           section: prepared.config.section,

@@ -145,6 +145,14 @@
                           <small>Use the local export cache to avoid reusing questions saved in earlier runs.</small>
                         </span>
                       </label>
+
+                      <label class="toggle-card">
+                        <input id="include-answer-key" name="includeAnswerKey" type="checkbox">
+                        <span>
+                          <strong>Append answer key + rationale</strong>
+                          <small>Add a separate answer and explanation section after the question pages in each batch.</small>
+                        </span>
+                      </label>
                     </div>
                   </div>
                 </div>
@@ -229,6 +237,9 @@
           </section>
 
           <div class="action-row workspace-action-row">
+            <button id="clear-history-button" class="button button-secondary button-clear-history" type="button">
+              Clear export history
+            </button>
             <button id="preview-button" class="button button-secondary" type="button">
               Preview export
             </button>

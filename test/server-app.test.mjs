@@ -120,3 +120,39 @@ test('server blocks overlapping exports and exposes active job status', async ()
     });
   }
 });
+
+test('server clears the local export history cache on demand', async () => {
+  let cleared = 0;
+
+  const server = createAppServer({
+    lookupFetcher: async () => lookupFixture,
+    clearHistory: async () => {
+      cleared += 1;
+    },
+  });
+
+  await new Promise((resolve) => server.listen(0, resolve));
+  const port = server.address().port;
+  const baseUrl = `http://127.0.0.1:${port}`;
+
+  try {
+    const response = await fetch(`${baseUrl}/api/export-history/clear`, {
+      method: 'POST',
+    });
+    const body = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(body, { ok: true });
+    assert.equal(cleared, 1);
+  } finally {
+    await new Promise((resolve, reject) => {
+      server.close((error) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve();
+      });
+    });
+  }
+});

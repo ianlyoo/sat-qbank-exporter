@@ -5,6 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { DEFAULT_EXPORT_OPTIONS } from '../core/constants.mjs';
+import { clearExportHistory } from '../core/export-history.mjs';
 import { mapLookupForUi, normalizeExportOptions } from '../core/helpers.mjs';
 import { formatProgress, previewExport, runExport } from '../core/exporter.mjs';
 import { fetchQuestionLookup } from '../core/qbank.mjs';
@@ -143,6 +144,7 @@ export function createAppServer({
   exportRunner = runExport,
   previewRunner = previewExport,
   lookupFetcher = fetchQuestionLookup,
+  clearHistory = clearExportHistory,
 } = {}) {
   const jobStore = createJobStore();
 
@@ -206,6 +208,12 @@ export function createAppServer({
           });
 
         sendJson(response, 202, { jobId: job.id });
+        return;
+      }
+
+      if (request.method === 'POST' && url.pathname === '/api/export-history/clear') {
+        await clearHistory();
+        sendJson(response, 200, { ok: true });
         return;
       }
 

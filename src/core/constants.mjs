@@ -30,6 +30,7 @@ export const DEFAULT_EXPORT_OPTIONS = {
   questionCount: 20,
   chunkSize: 20,
   mode: EXPORT_MODES.student,
+  includeAnswerKey: false,
   outputDir: './output',
   excludeActive: false,
   excludeExported: false,

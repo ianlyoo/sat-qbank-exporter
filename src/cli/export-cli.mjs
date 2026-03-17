@@ -19,6 +19,7 @@ Optional:
   --question-count Total questions to export (default: ${DEFAULT_EXPORT_OPTIONS.questionCount})
   --from-page      First batch number to export (default: ${DEFAULT_EXPORT_OPTIONS.fromPage})
   --to-page        Last batch number to export (default: all batches)
+  --include-answer-key true | false (default: ${DEFAULT_EXPORT_OPTIONS.includeAnswerKey})
   --difficulty     Comma-separated: Easy, Medium, Hard
   --skills         Comma-separated skill labels
   --exclude-active true | false (default: ${DEFAULT_EXPORT_OPTIONS.excludeActive})
@@ -65,6 +66,10 @@ function mapCliToOptions(rawArgs) {
     questionCount: parseInteger(rawArgs['question-count'], DEFAULT_EXPORT_OPTIONS.questionCount),
     chunkSize: parseInteger(rawArgs['chunk-size'] ?? rawArgs['per-page'], DEFAULT_EXPORT_OPTIONS.chunkSize),
     mode: rawArgs.mode || DEFAULT_EXPORT_OPTIONS.mode,
+    includeAnswerKey: parseBoolean(
+      rawArgs['include-answer-key'],
+      DEFAULT_EXPORT_OPTIONS.includeAnswerKey
+    ),
     outputDir: rawArgs.output || DEFAULT_EXPORT_OPTIONS.outputDir,
     excludeActive: parseBoolean(rawArgs['exclude-active'], DEFAULT_EXPORT_OPTIONS.excludeActive),
     excludeExported: parseBoolean(

@@ -21,6 +21,7 @@ test('normalizeExportOptions applies defaults and resolves output path', () => {
   });
 
   assert.equal(options.mode, EXPORT_MODES.student);
+  assert.equal(options.includeAnswerKey, false);
   assert.equal(options.questionCount, 20);
   assert.equal(options.shuffle, true);
   assert.equal(options.excludeExported, false);
@@ -121,4 +122,39 @@ test('renderDocumentHtml includes teacher answer block only in teacher mode', ()
   assert.match(teacherHtml, /Correct Answer/);
   assert.doesNotMatch(cleanHtml, /Correct Answer/);
   assert.doesNotMatch(cleanHtml, /Question Q1/);
+});
+
+test('renderDocumentHtml includes fixed page layout scaffolding', () => {
+  const html = renderDocumentHtml({
+    batch: [
+      {
+        questionId: 'Q1',
+        domain: 'Algebra',
+        skill: 'Linear functions',
+        difficultyLabel: 'Easy',
+        prompt: '<p>Prompt</p>',
+        stem: '<p>Stem</p>',
+        answerOptions: [],
+        correctAnswer: [],
+        rationale: '',
+      },
+    ],
+    mode: EXPORT_MODES.student,
+    includeAnswerKey: true,
+    headerText: 'SAT Math - Batch 1',
+  });
+
+  assert.match(html, /id="pages-root"/);
+  assert.match(html, /id="layout-sandbox"/);
+  assert.match(html, /__SAT_PDF_LAYOUT_DONE__/);
+  assert.match(html, /Layout '\s*\+\s*slotCount\s*\+\s*' per page/);
+  assert.match(html, /Practice Packet/);
+  assert.match(html, /Batch Index/);
+  assert.match(html, /Included Questions/);
+  assert.match(html, /Linear functions/);
+  assert.match(html, /Answer Key and Rationale/);
+  assert.match(html, /The following pages contain the correct answer and explanation/);
+  assert.match(html, /answer-appendix-template/);
+  assert.match(html, /answer-divider-page-template/);
+  assert.match(html, /cover-page-template/);
 });

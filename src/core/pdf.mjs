@@ -15,16 +15,23 @@ export async function renderPdfBatch(browser, html, filePath) {
 
   try {
     await page.setContent(html, { waitUntil: 'load' });
+    await page.waitForFunction(() => window.__SAT_PDF_LAYOUT_DONE__ === true || window.__SAT_PDF_LAYOUT_ERROR__ !== null);
+    const layoutError = await page.evaluate(() => window.__SAT_PDF_LAYOUT_ERROR__);
+
+    if (layoutError) {
+      throw new Error(`Failed to build PDF layout: ${layoutError}`);
+    }
+
     await page.emulateMedia({ media: 'print' });
     await page.pdf({
       path: filePath,
       format: 'A4',
       printBackground: true,
       margin: {
-        top: '12mm',
-        right: '10mm',
-        bottom: '14mm',
-        left: '10mm',
+        top: '0',
+        right: '0',
+        bottom: '0',
+        left: '0',
       },
     });
   } finally {

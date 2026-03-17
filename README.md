@@ -10,6 +10,7 @@ It lets you choose an assessment, section, domains, skills, difficulty, question
 - Filters questions by section, domains, skills, and difficulty
 - Previews how many questions match before exporting
 - Renders student, teacher, or clean PDF batches locally with Playwright
+- Optionally appends a separate answer key and rationale section after each batch
 - Optionally skips questions that were already exported on your machine
 
 ## What This Project Is
@@ -74,6 +75,7 @@ npm run export -- \
 - `--chunk-size 10` questions per PDF file
 - `--difficulty "Easy,Medium"` difficulty filter
 - `--skills "Linear functions,Inferences"` skill filter
+- `--include-answer-key true` append an answer key and rationale section after each batch
 - `--exclude-active true` skip active/live items when available
 - `--exclude-exported true` skip questions already exported on this machine
 - `--preview` show counts without rendering PDFs

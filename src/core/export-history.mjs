@@ -67,6 +67,16 @@ export async function appendExportHistory(config, questions, filePath = EXPORT_H
   return existing;
 }
 
+export async function clearExportHistory(filePath = EXPORT_HISTORY_PATH) {
+  try {
+    await fs.unlink(filePath);
+  } catch (error) {
+    if (error.code !== 'ENOENT') {
+      throw error;
+    }
+  }
+}
+
 export function filterPreviouslyExportedQuestions(config, questions, historySet) {
   return questions.filter((question) => !historySet.has(createQuestionKey(config, question)));
 }

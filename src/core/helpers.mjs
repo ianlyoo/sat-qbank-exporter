@@ -131,6 +131,7 @@ export function normalizeExportOptions(input = {}) {
     questionCount: parseInteger(merged.questionCount, DEFAULT_EXPORT_OPTIONS.questionCount),
     chunkSize: parseInteger(merged.chunkSize, DEFAULT_EXPORT_OPTIONS.chunkSize),
     mode: String(merged.mode || DEFAULT_EXPORT_OPTIONS.mode),
+    includeAnswerKey: parseBoolean(merged.includeAnswerKey, DEFAULT_EXPORT_OPTIONS.includeAnswerKey),
     outputDir: path.resolve(String(merged.outputDir || DEFAULT_EXPORT_OPTIONS.outputDir)),
     excludeActive: parseBoolean(merged.excludeActive, DEFAULT_EXPORT_OPTIONS.excludeActive),
     excludeExported: parseBoolean(merged.excludeExported, DEFAULT_EXPORT_OPTIONS.excludeExported),
