@@ -1,0 +1,13 @@
+{
+  "name": "sat-qbank-exporter",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "export": "node batch_export.mjs",
+    "start": "node server.mjs",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "playwright": "^1.58.2"
+  }
+}

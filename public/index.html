@@ -1,0 +1,389 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>SAT Exporter</title>
+    <meta
+      name="description"
+      content="Configure local SAT question exports, preview counts, and render polished PDF batches from your own machine."
+    >
+    <link rel="stylesheet" href="/styles.css">
+    <script type="module" src="/app.js"></script>
+  </head>
+  <body>
+    <div class="page-shell">
+      <div id="error-banner" class="error-banner hidden" role="alert" aria-live="assertive"></div>
+
+      <main class="workspace">
+        <form id="config-form" class="config-form">
+          <section class="panel panel-form panel-form-primary">
+            <div class="panel-heading panel-heading-form">
+              <div>
+                <p class="section-kicker">Export configuration</p>
+                <h2>Build a practice export</h2>
+              </div>
+              <button id="reload-button" class="button button-secondary" type="button">
+                Reload lookup + defaults
+              </button>
+            </div>
+
+            <div class="panel-intro-grid">
+              <p class="supporting-text config-intro helper-copy helper-copy-wide">
+                Choose the SAT slice you want, set the total export target, and preview how the PDFs
+                will batch before anything renders.
+              </p>
+
+              <p id="data-status" class="supporting-text status-strip" aria-live="polite">
+                Loading local API metadata...
+              </p>
+            </div>
+
+            <div class="panel-form-body">
+              <section class="workbench-card workbench-card-overview">
+                <div class="workbench-card-header">
+                  <div>
+                    <p class="section-kicker">Scope</p>
+                    <h3>Choose the SAT window</h3>
+                  </div>
+                  <p class="supporting-text workbench-card-note helper-copy helper-copy-note">
+                    Keep the high-level slice, export size, and destination visible in one band.
+                  </p>
+                </div>
+
+                <div class="field-grid field-grid-overview">
+                  <label class="field">
+                    <span class="field-label">Assessment</span>
+                    <select id="assessment" name="assessment"></select>
+                  </label>
+
+                  <label class="field">
+                    <span class="field-label">Section</span>
+                    <select id="section" name="section"></select>
+                  </label>
+
+                  <label class="field">
+                    <span class="field-label">Total questions to export</span>
+                    <input id="question-count" name="questionCount" type="number" min="1" required>
+                    <small class="field-hint">Overall question target across the export.</small>
+                  </label>
+
+                  <label class="field">
+                    <span class="field-label">Questions per PDF batch</span>
+                    <input id="chunk-size" name="chunkSize" type="number" min="1" required>
+                    <small class="field-hint">Start a new file after this many questions.</small>
+                  </label>
+
+                  <label class="field field-span-full">
+                    <span class="field-label">Output directory</span>
+                    <input id="output-dir" name="outputDir" type="text" required>
+                  </label>
+                </div>
+              </section>
+
+              <section class="workbench-card workbench-card-output">
+                <div class="workbench-card-header">
+                  <div>
+                    <p class="section-kicker">Output behavior</p>
+                    <h3>Set delivery and run rules</h3>
+                  </div>
+                  <p class="supporting-text workbench-card-note helper-copy helper-copy-note">
+                    Choose packet style, batch handling, and what gets excluded before rendering.
+                  </p>
+                </div>
+
+                <div class="settings-grid">
+                  <fieldset class="field mode-fieldset settings-panel settings-panel-mode">
+                    <legend id="mode-label" class="field-label">Mode</legend>
+                    <div class="mode-grid" role="radiogroup" aria-labelledby="mode-label">
+                      <label class="mode-option">
+                        <input type="radio" name="mode" value="student">
+                        <span class="mode-copy">
+                          <strong>Student</strong>
+                          <small>Prompt-only packets</small>
+                        </span>
+                      </label>
+                      <label class="mode-option">
+                        <input type="radio" name="mode" value="teacher">
+                        <span class="mode-copy">
+                          <strong>Teacher</strong>
+                          <small>Answer key and rationale</small>
+                        </span>
+                      </label>
+                      <label class="mode-option">
+                        <input type="radio" name="mode" value="clean">
+                        <span class="mode-copy">
+                          <strong>Clean</strong>
+                          <small>Minimal headers and keys</small>
+                        </span>
+                      </label>
+                    </div>
+                  </fieldset>
+
+                  <div class="settings-panel settings-panel-flags">
+                    <div class="toggle-grid toggle-grid-compact">
+                      <label class="toggle-card">
+                        <input id="shuffle" name="shuffle" type="checkbox">
+                        <span>
+                          <strong>Shuffle questions</strong>
+                          <small>Randomize selection order before batching.</small>
+                        </span>
+                      </label>
+
+                      <label class="toggle-card">
+                        <input id="exclude-active" name="excludeActive" type="checkbox">
+                        <span>
+                          <strong>Exclude active items</strong>
+                          <small>Filter out currently live questions when available.</small>
+                        </span>
+                      </label>
+
+                      <label class="toggle-card">
+                        <input id="exclude-exported" name="excludeExported" type="checkbox">
+                        <span>
+                          <strong>Skip previously exported questions</strong>
+                          <small>Use the local export cache to avoid reusing questions saved in earlier runs.</small>
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </section>
+            </div>
+          </section>
+
+          <section class="panel panel-form panel-form-filters">
+            <div class="panel-heading panel-heading-tight panel-heading-bench">
+              <div>
+                <p class="section-kicker">Filter bench</p>
+                <h2>Shape the export mix</h2>
+              </div>
+              <p class="supporting-text panel-heading-note helper-copy helper-copy-note">
+                Keep the filter bench in a simple top-to-bottom flow so domains, skills, and difficulty stay readable in one desktop column.
+              </p>
+            </div>
+
+            <section class="workbench-card workbench-card-filters">
+              <div class="filter-grid">
+                <section class="fieldset-block filter-panel filter-panel-domains">
+                  <div class="fieldset-header">
+                    <div>
+                      <h3>Domains</h3>
+                      <p>Choose at least one domain for the selected section.</p>
+                    </div>
+                    <div class="fieldset-actions">
+                      <button
+                        id="domains-select-all"
+                        class="button button-secondary button-compact select-all-button"
+                        type="button"
+                      >
+                        Select all
+                      </button>
+                      <span id="domain-count" class="count-pill">0 selected</span>
+                    </div>
+                  </div>
+                  <div id="domains-chips" class="chip-wrap" aria-live="polite"></div>
+                </section>
+
+                <section class="fieldset-block filter-panel filter-panel-skills">
+                  <div class="fieldset-header">
+                    <div>
+                      <h3>Skills</h3>
+                      <p>Select one or more skills from the selected domains.</p>
+                    </div>
+                    <div class="fieldset-actions">
+                      <button
+                        id="skills-select-all"
+                        class="button button-secondary button-compact select-all-button"
+                        type="button"
+                      >
+                        Select all
+                      </button>
+                      <span id="skill-count" class="count-pill">0 selected</span>
+                    </div>
+                  </div>
+                  <div id="skills-chips" class="chip-wrap" aria-live="polite"></div>
+                </section>
+
+                <section class="fieldset-block filter-panel filter-panel-difficulty">
+                  <div class="fieldset-header">
+                    <div>
+                      <h3>Difficulty</h3>
+                      <p>Select one or more difficulty levels for the export mix.</p>
+                    </div>
+                    <div class="fieldset-actions">
+                      <button
+                        id="difficulty-select-all"
+                        class="button button-secondary button-compact select-all-button"
+                        type="button"
+                      >
+                        Select all
+                      </button>
+                      <span id="difficulty-count" class="count-pill">0 selected</span>
+                    </div>
+                  </div>
+                  <div id="difficulty-chips" class="chip-wrap" aria-live="polite"></div>
+                </section>
+              </div>
+            </section>
+          </section>
+
+          <div class="action-row workspace-action-row">
+            <button id="preview-button" class="button button-secondary" type="button">
+              Preview export
+            </button>
+            <button id="export-button" class="button button-primary" type="button">
+              Start export job
+            </button>
+          </div>
+        </form>
+
+        <aside class="sidebar">
+          <section class="panel panel-preview">
+            <div class="panel-heading panel-heading-tight">
+              <div>
+                <p class="section-kicker">Preview</p>
+                <h2>Batch plan</h2>
+              </div>
+              <span id="preview-state" class="state-pill">Waiting</span>
+            </div>
+
+            <div class="preview-overview">
+              <div class="metric-grid">
+                <article class="metric-card">
+                  <span class="metric-label">Matched</span>
+                  <strong id="preview-matched" class="metric-value">--</strong>
+                </article>
+                <article class="metric-card">
+                  <span class="metric-label">Questions in export</span>
+                  <strong id="preview-export-count" class="metric-value">--</strong>
+                </article>
+                <article class="metric-card">
+                  <span class="metric-label">Total batches</span>
+                  <strong id="preview-total-batches" class="metric-value">--</strong>
+                </article>
+                <article class="metric-card">
+                  <span class="metric-label">PDFs to render</span>
+                  <strong id="preview-export-batches" class="metric-value">--</strong>
+                </article>
+              </div>
+
+              <dl class="detail-list detail-list-preview">
+                <div>
+                  <dt>Assessment</dt>
+                  <dd id="preview-assessment">--</dd>
+                </div>
+                <div>
+                  <dt>Section</dt>
+                  <dd id="preview-section">--</dd>
+                </div>
+                <div>
+                  <dt>Mode</dt>
+                  <dd id="preview-mode">--</dd>
+                </div>
+                <div>
+                  <dt>Output</dt>
+                  <dd id="preview-output">--</dd>
+                </div>
+                <div>
+                  <dt>Available after cache</dt>
+                  <dd id="preview-available">--</dd>
+                </div>
+                <div>
+                  <dt>Skipped from history</dt>
+                  <dd id="preview-skipped">--</dd>
+                </div>
+              </dl>
+            </div>
+
+            <div class="selection-summary">
+              <p class="selection-summary-label">Filter mix</p>
+
+              <div class="summary-group">
+                <span class="summary-title">Domains</span>
+                <div id="preview-domains" class="summary-chip-wrap" aria-live="polite"></div>
+              </div>
+
+              <div class="summary-group">
+                <span class="summary-title">Skills</span>
+                <div id="preview-skills" class="summary-chip-wrap" aria-live="polite"></div>
+              </div>
+
+              <div class="summary-group">
+                <span class="summary-title">Difficulty</span>
+                <div id="preview-difficulty" class="summary-chip-wrap" aria-live="polite"></div>
+              </div>
+            </div>
+          </section>
+
+          <section class="panel panel-status">
+            <div class="panel-heading panel-heading-tight">
+              <div>
+                <p class="section-kicker">Export status</p>
+                <h2>Live job monitor</h2>
+              </div>
+              <span id="job-state" class="state-pill state-pill-muted">Idle</span>
+            </div>
+
+            <div class="status-overview">
+              <div class="status-primary">
+                <div class="progress-block">
+                  <div class="progress-meta">
+                    <span id="job-phase">Waiting for an export job</span>
+                    <span id="job-percent">0%</span>
+                  </div>
+                  <div class="progress-track" aria-hidden="true">
+                    <span id="job-progress" class="progress-fill"></span>
+                  </div>
+                </div>
+
+                <p id="job-message" class="supporting-text job-message">
+                  Preview the current configuration or start a render when you are ready.
+                </p>
+                <p id="job-note" class="status-note">
+                  Exports stay local; progress updates automatically once a job starts.
+                </p>
+              </div>
+
+              <dl class="detail-list detail-list-compact detail-list-status">
+                <div>
+                  <dt>Job ID</dt>
+                  <dd id="job-id">--</dd>
+                </div>
+                <div>
+                  <dt>Current batch</dt>
+                  <dd id="job-batch">--</dd>
+                </div>
+                <div>
+                  <dt>Saved files</dt>
+                  <dd id="job-saved-count">0</dd>
+                </div>
+                <div>
+                  <dt>Output folder</dt>
+                  <dd id="job-output">--</dd>
+                </div>
+              </dl>
+            </div>
+
+            <div class="saved-files-block">
+              <p class="saved-files-label">Recent files</p>
+              <ul id="saved-files" class="saved-files-list">
+                <li class="saved-files-empty">No files saved yet.</li>
+              </ul>
+            </div>
+          </section>
+
+          <section class="config-note" aria-label="Local use note">
+            <p class="section-kicker">Local use note</p>
+            <p>
+              This interface is intended for local SAT practice preparation. Use it within College
+              Board terms, keep exports on trusted devices, and review copyright boundaries before
+              distribution.
+            </p>
+          </section>
+
+        </aside>
+      </main>
+    </div>
+  </body>
+</html>
