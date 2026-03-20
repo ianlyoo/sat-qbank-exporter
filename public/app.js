@@ -30,7 +30,6 @@ const state = {
     includeAnswerKey: false,
     outputDir: './output',
     shuffle: true,
-    excludeActive: false,
     excludeExported: false,
   },
 };
@@ -67,7 +66,6 @@ function cacheDom() {
   dom.outputDir = document.getElementById('output-dir');
   dom.shuffle = document.getElementById('shuffle');
   dom.includeAnswerKey = document.getElementById('include-answer-key');
-  dom.excludeActive = document.getElementById('exclude-active');
   dom.excludeExported = document.getElementById('exclude-exported');
   dom.previewButton = document.getElementById('preview-button');
   dom.exportButton = document.getElementById('export-button');
@@ -131,11 +129,6 @@ function bindEvents() {
   dom.includeAnswerKey.addEventListener('change', (event) => {
     updateForm({ includeAnswerKey: event.target.checked });
   });
-
-  dom.excludeActive.addEventListener('change', (event) => {
-    updateForm({ excludeActive: event.target.checked });
-  });
-
   dom.excludeExported.addEventListener('change', (event) => {
     updateForm({ excludeExported: event.target.checked });
   });
@@ -260,7 +253,6 @@ function createFormFromDefaults(defaults, lookup) {
       includeAnswerKey: Boolean(defaults?.includeAnswerKey ?? false),
       outputDir: defaults?.outputDir || './output',
       shuffle: Boolean(defaults?.shuffle ?? true),
-      excludeActive: Boolean(defaults?.excludeActive ?? false),
       excludeExported: Boolean(defaults?.excludeExported ?? false),
     },
     { autoChooseDomain: true }
@@ -332,7 +324,6 @@ function doesPreviewMatchForm(preview, form) {
     'includeAnswerKey',
     'outputDir',
     'shuffle',
-    'excludeActive',
     'excludeExported',
   ];
 
@@ -563,7 +554,7 @@ function buildPayload() {
     includeAnswerKey: state.form.includeAnswerKey,
     outputDir: state.form.outputDir,
     shuffle: state.form.shuffle,
-    excludeActive: state.form.excludeActive,
+    excludeActive: false,
     excludeExported: state.form.excludeExported,
   };
 }
@@ -748,7 +739,6 @@ function renderInputs() {
   dom.outputDir.value = state.form.outputDir;
   dom.shuffle.checked = state.form.shuffle;
   dom.includeAnswerKey.checked = state.form.includeAnswerKey;
-  dom.excludeActive.checked = state.form.excludeActive;
   dom.excludeExported.checked = state.form.excludeExported;
 
   document.querySelectorAll('input[name="mode"]').forEach((input) => {
@@ -761,7 +751,6 @@ function renderInputs() {
   dom.outputDir.disabled = disabled;
   dom.shuffle.disabled = disabled;
   dom.includeAnswerKey.disabled = disabled;
-  dom.excludeActive.disabled = disabled;
   dom.excludeExported.disabled = disabled;
   document.querySelectorAll('input[name="mode"]').forEach((input) => {
     input.disabled = disabled;
@@ -893,6 +882,10 @@ function renderSavedFiles(files) {
 }
 
 function renderSummaryChips(container, values, emptyLabel) {
+  if (!container) {
+    return;
+  }
+
   container.replaceChildren();
 
   if (!Array.isArray(values) || !values.length) {

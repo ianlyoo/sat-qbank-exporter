@@ -24,20 +24,11 @@
                 <h2>Build a practice export</h2>
               </div>
               <button id="reload-button" class="button button-secondary" type="button">
-                Reload lookup + defaults
+                Reload
               </button>
             </div>
 
-            <div class="panel-intro-grid">
-              <p class="supporting-text config-intro helper-copy helper-copy-wide">
-                Choose the SAT slice you want, set the total export target, and preview how the PDFs
-                will batch before anything renders.
-              </p>
-
-              <p id="data-status" class="supporting-text status-strip" aria-live="polite">
-                Loading local API metadata...
-              </p>
-            </div>
+            <p id="data-status" class="hidden" aria-live="polite"></p>
 
             <div class="panel-form-body">
               <section class="workbench-card workbench-card-overview">
@@ -46,9 +37,6 @@
                     <p class="section-kicker">Scope</p>
                     <h3>Choose the SAT window</h3>
                   </div>
-                  <p class="supporting-text workbench-card-note helper-copy helper-copy-note">
-                    Keep the high-level slice, export size, and destination visible in one band.
-                  </p>
                 </div>
 
                 <div class="field-grid field-grid-overview">
@@ -87,9 +75,6 @@
                     <p class="section-kicker">Output behavior</p>
                     <h3>Set delivery and run rules</h3>
                   </div>
-                  <p class="supporting-text workbench-card-note helper-copy helper-copy-note">
-                    Choose packet style, batch handling, and what gets excluded before rendering.
-                  </p>
                 </div>
 
                 <div class="settings-grid">
@@ -106,8 +91,8 @@
                       <label class="mode-option">
                         <input type="radio" name="mode" value="teacher">
                         <span class="mode-copy">
-                          <strong>Teacher</strong>
-                          <small>Answer key and rationale</small>
+                          <strong>Teacher + key</strong>
+                          <small>Include the answer sheet and rationale at the end.</small>
                         </span>
                       </label>
                       <label class="mode-option">
@@ -127,14 +112,6 @@
                         <span>
                           <strong>Shuffle questions</strong>
                           <small>Randomize selection order before batching.</small>
-                        </span>
-                      </label>
-
-                      <label class="toggle-card">
-                        <input id="exclude-active" name="excludeActive" type="checkbox">
-                        <span>
-                          <strong>Exclude active items</strong>
-                          <small>Filter out currently live questions when available.</small>
                         </span>
                       </label>
 
@@ -166,9 +143,6 @@
                 <p class="section-kicker">Filter bench</p>
                 <h2>Shape the export mix</h2>
               </div>
-              <p class="supporting-text panel-heading-note helper-copy helper-copy-note">
-                Keep the filter bench in a simple top-to-bottom flow so domains, skills, and difficulty stay readable in one desktop column.
-              </p>
             </div>
 
             <section class="workbench-card workbench-card-filters">
@@ -250,83 +224,6 @@
         </form>
 
         <aside class="sidebar">
-          <section class="panel panel-preview">
-            <div class="panel-heading panel-heading-tight">
-              <div>
-                <p class="section-kicker">Preview</p>
-                <h2>Batch plan</h2>
-              </div>
-              <span id="preview-state" class="state-pill">Waiting</span>
-            </div>
-
-            <div class="preview-overview">
-              <div class="metric-grid">
-                <article class="metric-card">
-                  <span class="metric-label">Matched</span>
-                  <strong id="preview-matched" class="metric-value">--</strong>
-                </article>
-                <article class="metric-card">
-                  <span class="metric-label">Questions in export</span>
-                  <strong id="preview-export-count" class="metric-value">--</strong>
-                </article>
-                <article class="metric-card">
-                  <span class="metric-label">Total batches</span>
-                  <strong id="preview-total-batches" class="metric-value">--</strong>
-                </article>
-                <article class="metric-card">
-                  <span class="metric-label">PDFs to render</span>
-                  <strong id="preview-export-batches" class="metric-value">--</strong>
-                </article>
-              </div>
-
-              <dl class="detail-list detail-list-preview">
-                <div>
-                  <dt>Assessment</dt>
-                  <dd id="preview-assessment">--</dd>
-                </div>
-                <div>
-                  <dt>Section</dt>
-                  <dd id="preview-section">--</dd>
-                </div>
-                <div>
-                  <dt>Mode</dt>
-                  <dd id="preview-mode">--</dd>
-                </div>
-                <div>
-                  <dt>Output</dt>
-                  <dd id="preview-output">--</dd>
-                </div>
-                <div>
-                  <dt>Available after cache</dt>
-                  <dd id="preview-available">--</dd>
-                </div>
-                <div>
-                  <dt>Skipped from history</dt>
-                  <dd id="preview-skipped">--</dd>
-                </div>
-              </dl>
-            </div>
-
-            <div class="selection-summary">
-              <p class="selection-summary-label">Filter mix</p>
-
-              <div class="summary-group">
-                <span class="summary-title">Domains</span>
-                <div id="preview-domains" class="summary-chip-wrap" aria-live="polite"></div>
-              </div>
-
-              <div class="summary-group">
-                <span class="summary-title">Skills</span>
-                <div id="preview-skills" class="summary-chip-wrap" aria-live="polite"></div>
-              </div>
-
-              <div class="summary-group">
-                <span class="summary-title">Difficulty</span>
-                <div id="preview-difficulty" class="summary-chip-wrap" aria-live="polite"></div>
-              </div>
-            </div>
-          </section>
-
           <section class="panel panel-status">
             <div class="panel-heading panel-heading-tight">
               <div>
@@ -384,13 +281,62 @@
             </div>
           </section>
 
-          <section class="config-note" aria-label="Local use note">
-            <p class="section-kicker">Local use note</p>
-            <p>
-              This interface is intended for local SAT practice preparation. Use it within College
-              Board terms, keep exports on trusted devices, and review copyright boundaries before
-              distribution.
-            </p>
+          <section class="panel panel-preview">
+            <div class="panel-heading panel-heading-tight">
+              <div>
+                <p class="section-kicker">Preview</p>
+                <h2>Batch plan</h2>
+              </div>
+              <span id="preview-state" class="state-pill">Waiting</span>
+            </div>
+
+            <div class="preview-overview">
+              <div class="metric-grid">
+                <article class="metric-card">
+                  <span class="metric-label">Matched</span>
+                  <strong id="preview-matched" class="metric-value">--</strong>
+                </article>
+                <article class="metric-card">
+                  <span class="metric-label">Questions in export</span>
+                  <strong id="preview-export-count" class="metric-value">--</strong>
+                </article>
+                <article class="metric-card">
+                  <span class="metric-label">Total batches</span>
+                  <strong id="preview-total-batches" class="metric-value">--</strong>
+                </article>
+                <article class="metric-card">
+                  <span class="metric-label">PDFs to render</span>
+                  <strong id="preview-export-batches" class="metric-value">--</strong>
+                </article>
+              </div>
+
+              <dl class="detail-list detail-list-preview">
+                <div>
+                  <dt>Assessment</dt>
+                  <dd id="preview-assessment">--</dd>
+                </div>
+                <div>
+                  <dt>Section</dt>
+                  <dd id="preview-section">--</dd>
+                </div>
+                <div>
+                  <dt>Mode</dt>
+                  <dd id="preview-mode">--</dd>
+                </div>
+                <div>
+                  <dt>Output</dt>
+                  <dd id="preview-output">--</dd>
+                </div>
+                <div>
+                  <dt>Available after cache</dt>
+                  <dd id="preview-available">--</dd>
+                </div>
+                <div>
+                  <dt>Skipped from history</dt>
+                  <dd id="preview-skipped">--</dd>
+                </div>
+              </dl>
+            </div>
           </section>
 
         </aside>
