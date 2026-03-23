@@ -581,6 +581,19 @@ button {
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.58);
 }
 
+.panel-form-primary .workbench-card-primary-section {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.panel-form-primary .workbench-card-primary-section + .workbench-card-primary-section {
+  padding-top: var(--space-5);
+  border-top: 1px solid rgba(52, 43, 31, 0.08);
+}
+
 .workbench-card-filters {
   display: grid;
   min-height: 0;
@@ -660,6 +673,22 @@ button {
   border-radius: var(--radius-md);
   border: 1px solid rgba(52, 43, 31, 0.08);
   background: rgba(255, 255, 255, 0.36);
+}
+
+.panel-form-primary .settings-panel {
+  gap: var(--space-4);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+}
+
+.panel-form-primary .settings-panel-flags {
+  align-content: start;
+}
+
+.panel-form-primary .settings-panel-flags .toggle-grid {
+  gap: var(--space-3);
 }
 
 .settings-panel-mode {
@@ -1456,6 +1485,10 @@ input[type="text"]:focus {
 
   .panel-form-primary .panel-form-body {
     gap: var(--space-4);
+  }
+
+  .panel-form-primary .workbench-card-primary-section + .workbench-card-primary-section {
+    padding-top: var(--space-4);
   }
 
   .sidebar {
