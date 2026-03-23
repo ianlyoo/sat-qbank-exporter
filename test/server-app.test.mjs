@@ -156,3 +156,41 @@ test('server clears the local export history cache on demand', async () => {
     });
   }
 });
+
+test('server exposes export history entries for the in-app modal', async () => {
+  const server = createAppServer({
+    lookupFetcher: async () => lookupFixture,
+    historyReader: async () => ({
+      updatedAt: '2026-03-23T12:00:00.000Z',
+      questionKeys: ['SAT::Math::Q1', 'SAT::Math::Q2'],
+    }),
+  });
+
+  await new Promise((resolve) => server.listen(0, resolve));
+  const port = server.address().port;
+  const baseUrl = `http://127.0.0.1:${port}`;
+
+  try {
+    const response = await fetch(`${baseUrl}/api/export-history`);
+    const body = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.deepEqual(body, {
+      history: {
+        count: 2,
+        updatedAt: '2026-03-23T12:00:00.000Z',
+        questionKeys: ['SAT::Math::Q1', 'SAT::Math::Q2'],
+      },
+    });
+  } finally {
+    await new Promise((resolve, reject) => {
+      server.close((error) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve();
+      });
+    });
+  }
+});

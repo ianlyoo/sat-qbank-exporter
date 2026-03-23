@@ -5,7 +5,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { DEFAULT_EXPORT_OPTIONS } from '../core/constants.mjs';
-import { clearExportHistory } from '../core/export-history.mjs';
+import { clearExportHistory, readExportHistorySnapshot } from '../core/export-history.mjs';
 import { mapLookupForUi, normalizeExportOptions } from '../core/helpers.mjs';
 import { formatProgress, previewExport, runExport } from '../core/exporter.mjs';
 import { fetchQuestionLookup } from '../core/qbank.mjs';
@@ -145,6 +145,7 @@ export function createAppServer({
   previewRunner = previewExport,
   lookupFetcher = fetchQuestionLookup,
   clearHistory = clearExportHistory,
+  historyReader = readExportHistorySnapshot,
 } = {}) {
   const jobStore = createJobStore();
 
@@ -214,6 +215,18 @@ export function createAppServer({
       if (request.method === 'POST' && url.pathname === '/api/export-history/clear') {
         await clearHistory();
         sendJson(response, 200, { ok: true });
+        return;
+      }
+
+      if (request.method === 'GET' && url.pathname === '/api/export-history') {
+        const history = await historyReader(undefined, { strict: true });
+        sendJson(response, 200, {
+          history: {
+            count: history.questionKeys.length,
+            updatedAt: history.updatedAt,
+            questionKeys: history.questionKeys,
+          },
+        });
         return;
       }
 

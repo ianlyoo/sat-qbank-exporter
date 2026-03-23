@@ -9,6 +9,7 @@ import {
   clearExportHistory,
   filterPreviouslyExportedQuestions,
   loadExportHistory,
+  readExportHistorySnapshot,
 } from '../src/core/export-history.mjs';
 
 function createQuestion(questionId) {
@@ -64,4 +65,24 @@ test('clearExportHistory removes the local cache file when present', async () =>
 
   const remaining = await loadExportHistory(cachePath);
   assert.equal(remaining.size, 0);
+});
+
+test('readExportHistorySnapshot exposes metadata and question keys for UI history views', async () => {
+  const tempDir = await fs.mkdtemp(path.join(os.tmpdir(), 'sat-export-history-snapshot-'));
+  const cachePath = path.join(tempDir, 'export-history.json');
+
+  await fs.writeFile(
+    cachePath,
+    JSON.stringify({
+      version: 1,
+      updatedAt: '2026-03-23T12:00:00.000Z',
+      questionKeys: ['SAT::Math::Q1', 'SAT::Math::Q2'],
+    })
+  );
+
+  const snapshot = await readExportHistorySnapshot(cachePath);
+
+  assert.equal(snapshot.version, 1);
+  assert.equal(snapshot.updatedAt, '2026-03-23T12:00:00.000Z');
+  assert.deepEqual(snapshot.questionKeys, ['SAT::Math::Q1', 'SAT::Math::Q2']);
 });

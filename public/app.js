@@ -14,10 +14,19 @@ const state = {
     preview: false,
     export: false,
     clearHistory: false,
+    history: false,
   },
   pollTimer: null,
   sessionStorageAvailable: true,
   clearHistoryConfirm: false,
+  history: {
+    open: false,
+    loaded: false,
+    entries: [],
+    updatedAt: null,
+    error: '',
+    lastFocusedElement: null,
+  },
   form: {
     assessment: '',
     section: '',
@@ -70,6 +79,14 @@ function cacheDom() {
   dom.previewButton = document.getElementById('preview-button');
   dom.exportButton = document.getElementById('export-button');
   dom.clearHistoryButton = document.getElementById('clear-history-button');
+  dom.exportHistoryTrigger = document.getElementById('export-history-trigger');
+  dom.exportHistoryModal = document.getElementById('export-history-modal');
+  dom.exportHistoryClose = document.getElementById('export-history-close');
+  dom.exportHistoryCount = document.getElementById('export-history-count');
+  dom.exportHistoryUpdated = document.getElementById('export-history-updated');
+  dom.exportHistoryStatus = document.getElementById('export-history-status');
+  dom.exportHistoryFeedback = document.getElementById('export-history-feedback');
+  dom.exportHistoryList = document.getElementById('export-history-list');
   dom.previewState = document.getElementById('preview-state');
   dom.previewMatched = document.getElementById('preview-matched');
   dom.previewExportCount = document.getElementById('preview-export-count');
@@ -159,6 +176,20 @@ function bindEvents() {
     await handleClearHistoryClick();
   });
 
+  dom.exportHistoryTrigger.addEventListener('click', async () => {
+    await openHistoryModal();
+  });
+
+  dom.exportHistoryClose.addEventListener('click', () => {
+    closeHistoryModal();
+  });
+
+  dom.exportHistoryModal.addEventListener('click', (event) => {
+    if (event.target === dom.exportHistoryModal) {
+      closeHistoryModal();
+    }
+  });
+
   document.addEventListener('pointerdown', (event) => {
     if (!state.clearHistoryConfirm) {
       return;
@@ -170,6 +201,13 @@ function bindEvents() {
 
     state.clearHistoryConfirm = false;
     renderActions();
+  });
+
+  document.addEventListener('keydown', (event) => {
+    if (event.key === 'Escape' && state.history.open) {
+      event.preventDefault();
+      closeHistoryModal();
+    }
   });
 
   dom.domainsSelectAll.addEventListener('click', () => {
@@ -342,6 +380,14 @@ export function __testIsPreviewComparable(form) {
   return isPreviewComparable(form);
 }
 
+export function __testParseHistoryEntry(entry) {
+  return parseHistoryEntry(entry);
+}
+
+export function __testFormatHistoryUpdatedAt(value) {
+  return formatHistoryUpdatedAt(value);
+}
+
 function getDomainsForSection(section) {
   return state.lookup?.domainsBySection?.[section] || [];
 }
@@ -485,6 +531,12 @@ async function handleClearHistoryClick() {
       method: 'POST',
     });
 
+    state.history.loaded = true;
+    state.history.entries = [];
+    state.history.updatedAt = null;
+    state.history.error = '';
+    renderModal();
+
     if (isPreviewComparable(state.form)) {
       await requestPreview({ quietError: true });
     } else {
@@ -497,6 +549,64 @@ async function handleClearHistoryClick() {
   } finally {
     state.pending.clearHistory = false;
     renderActions();
+  }
+}
+
+async function openHistoryModal() {
+  if (!state.history.open) {
+    state.history.open = true;
+    state.history.lastFocusedElement =
+      typeof HTMLElement !== 'undefined' && document.activeElement instanceof HTMLElement
+        ? document.activeElement
+        : null;
+  }
+
+  renderModal();
+
+  if (typeof window !== 'undefined') {
+    window.requestAnimationFrame(() => {
+      if (!state.history.open) {
+        return;
+      }
+
+      dom.exportHistoryClose?.focus();
+    });
+  }
+
+  await loadExportHistory();
+}
+
+function closeHistoryModal() {
+  if (!state.history.open) {
+    return;
+  }
+
+  state.history.open = false;
+  renderModal();
+
+  const focusTarget = state.history.lastFocusedElement || dom.exportHistoryTrigger;
+  state.history.lastFocusedElement = null;
+  focusTarget?.focus?.();
+}
+
+async function loadExportHistory() {
+  state.pending.history = true;
+  state.history.error = '';
+  renderModal();
+
+  try {
+    const response = await fetchJson('/api/export-history');
+    state.history.loaded = true;
+    state.history.entries = Array.isArray(response.history?.questionKeys) ? response.history.questionKeys : [];
+    state.history.updatedAt = response.history?.updatedAt || null;
+  } catch (error) {
+    state.history.loaded = true;
+    state.history.entries = [];
+    state.history.updatedAt = null;
+    state.history.error = error.message || 'Unable to load the local export history.';
+  } finally {
+    state.pending.history = false;
+    renderModal();
   }
 }
 
@@ -595,6 +705,7 @@ function render() {
   renderChips();
   renderInputs();
   renderActions();
+  renderModal();
   renderPreview();
   renderJob();
 }
@@ -763,8 +874,10 @@ function renderActions() {
 
   dom.reloadButton.disabled = busy;
   dom.clearHistoryButton.disabled = busy || exportLocked;
+  dom.exportHistoryTrigger.disabled = state.pending.boot;
   dom.previewButton.disabled = busy || !state.lookup;
   dom.exportButton.disabled = busy || !state.lookup || exportLocked;
+  dom.exportHistoryTrigger.setAttribute('aria-expanded', state.history.open ? 'true' : 'false');
   dom.clearHistoryButton.textContent = state.pending.clearHistory
     ? 'Clearing...'
     : state.clearHistoryConfirm
@@ -779,6 +892,56 @@ function renderActions() {
     : state.pending.export
       ? 'Starting export...'
       : 'Start export job';
+}
+
+function renderModal() {
+  const isOpen = state.history.open;
+  document.body.classList.toggle('modal-open', isOpen);
+  dom.exportHistoryModal.classList.toggle('hidden', !isOpen);
+  dom.exportHistoryModal.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
+   dom.exportHistoryTrigger?.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+  dom.exportHistoryCount.textContent = `${state.history.entries.length.toLocaleString()} cached`;
+  dom.exportHistoryUpdated.textContent = formatHistoryUpdatedAt(state.history.updatedAt);
+
+  if (!isOpen) {
+    return;
+  }
+
+  const isLoading = state.pending.history;
+  const hasError = Boolean(state.history.error);
+  const isEmpty = state.history.loaded && !hasError && !state.history.entries.length;
+
+  dom.exportHistoryStatus.textContent = getHistoryStatusMessage({
+    isLoading,
+    hasError,
+    isEmpty,
+    count: state.history.entries.length,
+  });
+
+  if (hasError) {
+    renderHistoryFeedback(state.history.error, 'history-feedback history-feedback-error');
+    dom.exportHistoryList.classList.add('hidden');
+    return;
+  }
+
+  if (isLoading && !state.history.entries.length) {
+    renderHistoryFeedback('Loading local export history…', 'history-feedback');
+    dom.exportHistoryList.classList.add('hidden');
+    return;
+  }
+
+  if (isEmpty) {
+    renderHistoryFeedback(
+      'No local export history has been saved yet. Run an export first to start building this cache.',
+      'history-feedback history-feedback-empty'
+    );
+    dom.exportHistoryList.classList.add('hidden');
+    return;
+  }
+
+  renderHistoryFeedback('', 'history-feedback hidden');
+  dom.exportHistoryList.classList.remove('hidden');
+  renderHistoryEntries(state.history.entries);
 }
 
 function renderPreview() {
@@ -881,6 +1044,60 @@ function renderSavedFiles(files) {
   });
 }
 
+function renderHistoryFeedback(message, className) {
+  dom.exportHistoryFeedback.className = className;
+  dom.exportHistoryFeedback.textContent = message;
+}
+
+function renderHistoryEntries(entries) {
+  dom.exportHistoryList.replaceChildren();
+
+  entries.forEach((entry) => {
+    dom.exportHistoryList.append(createHistoryEntryItem(entry));
+  });
+}
+
+function createHistoryEntryItem(entry) {
+  const parsed = parseHistoryEntry(entry);
+  const item = document.createElement('li');
+  item.className = 'history-entry';
+
+  const header = document.createElement('div');
+  header.className = 'history-entry-header';
+
+  const headingBlock = document.createElement('div');
+  const title = document.createElement('p');
+  title.className = 'history-entry-title';
+  title.textContent = parsed.questionId || entry;
+
+  const subtitle = document.createElement('p');
+  subtitle.className = 'history-entry-subtitle';
+  subtitle.textContent = parsed.assessment && parsed.section ? `${parsed.assessment} · ${parsed.section}` : 'Cached question key';
+
+  headingBlock.append(title, subtitle);
+  header.append(headingBlock);
+
+  const meta = document.createElement('div');
+  meta.className = 'history-entry-meta';
+  if (parsed.assessment) {
+    meta.append(createSummaryChip(parsed.assessment, false));
+  }
+  if (parsed.section) {
+    meta.append(createSummaryChip(parsed.section, false));
+  }
+
+  if (meta.childNodes.length) {
+    header.append(meta);
+  }
+
+  const key = document.createElement('code');
+  key.className = 'history-entry-key';
+  key.textContent = entry;
+
+  item.append(header, key);
+  return item;
+}
+
 function renderSummaryChips(container, values, emptyLabel) {
   if (!container) {
     return;
@@ -903,6 +1120,25 @@ function createSummaryChip(label, muted) {
   chip.className = `summary-chip${muted ? ' summary-chip-muted' : ''}`;
   chip.textContent = label;
   return chip;
+}
+
+function parseHistoryEntry(entry) {
+  const parts = String(entry || '').split('::');
+
+  if (parts.length < 3) {
+    return {
+      assessment: '',
+      section: '',
+      questionId: String(entry || ''),
+    };
+  }
+
+  const [assessment, section, ...questionIdParts] = parts;
+  return {
+    assessment,
+    section,
+    questionId: questionIdParts.join('::'),
+  };
 }
 
 function getProgressValue(job) {
@@ -995,6 +1231,35 @@ function getJobStateClass(value) {
     default:
       return 'state-pill-muted';
   }
+}
+
+function formatHistoryUpdatedAt(value) {
+  if (!value) {
+    return 'Waiting for local history data.';
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return 'Updated recently on this machine.';
+  }
+
+  return `Updated ${date.toLocaleString()}`;
+}
+
+function getHistoryStatusMessage({ isLoading, hasError, isEmpty, count }) {
+  if (hasError) {
+    return 'The local export history could not be read.';
+  }
+
+  if (isLoading) {
+    return 'Reading the local export cache…';
+  }
+
+  if (isEmpty) {
+    return 'The cache is empty right now.';
+  }
+
+  return `${count.toLocaleString()} cached question key${count === 1 ? '' : 's'} available for review.`;
 }
 
 function setError(message) {

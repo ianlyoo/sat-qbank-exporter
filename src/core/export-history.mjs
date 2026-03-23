@@ -3,6 +3,10 @@ import path from 'node:path';
 
 const EXPORT_HISTORY_PATH = path.resolve('.sat-exporter/export-history.json');
 
+function createInvalidCacheError() {
+  return new Error('The local export-history cache is invalid. Remove .sat-exporter/export-history.json and try again.');
+}
+
 function createQuestionKey(config, question) {
   return `${config.assessment}::${config.section}::${question.questionId}`;
 }
@@ -11,34 +15,56 @@ async function ensureParentDirectory(filePath) {
   await fs.mkdir(path.dirname(filePath), { recursive: true });
 }
 
-export async function loadExportHistory(filePath = EXPORT_HISTORY_PATH, { strict = false } = {}) {
+export async function readExportHistorySnapshot(filePath = EXPORT_HISTORY_PATH, { strict = false } = {}) {
   try {
     const raw = await fs.readFile(filePath, 'utf8');
     const parsed = JSON.parse(raw);
 
     if (!Array.isArray(parsed.questionKeys)) {
       if (strict) {
-        throw new Error('The local export-history cache is invalid. Remove .sat-exporter/export-history.json and try again.');
+        throw createInvalidCacheError();
       }
-      return new Set();
+
+      return {
+        version: 1,
+        updatedAt: null,
+        questionKeys: [],
+      };
     }
 
-    return new Set(parsed.questionKeys.map((item) => String(item)));
+    return {
+      version: Number(parsed.version) || 1,
+      updatedAt: typeof parsed.updatedAt === 'string' ? parsed.updatedAt : null,
+      questionKeys: parsed.questionKeys.map((item) => String(item)),
+    };
   } catch (error) {
     if (error.code === 'ENOENT') {
-      return new Set();
+      return {
+        version: 1,
+        updatedAt: null,
+        questionKeys: [],
+      };
     }
 
     if (error.name === 'SyntaxError') {
       if (strict) {
-        throw new Error('The local export-history cache is invalid. Remove .sat-exporter/export-history.json and try again.');
+        throw createInvalidCacheError();
       }
 
-      return new Set();
+      return {
+        version: 1,
+        updatedAt: null,
+        questionKeys: [],
+      };
     }
 
     throw error;
   }
+}
+
+export async function loadExportHistory(filePath = EXPORT_HISTORY_PATH, { strict = false } = {}) {
+  const snapshot = await readExportHistorySnapshot(filePath, { strict });
+  return new Set(snapshot.questionKeys);
 }
 
 export async function appendExportHistory(config, questions, filePath = EXPORT_HISTORY_PATH) {

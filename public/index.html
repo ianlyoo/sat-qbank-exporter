@@ -75,6 +75,18 @@
                     <p class="section-kicker">Output behavior</p>
                     <h3>Set delivery and run rules</h3>
                   </div>
+                  <div class="workbench-card-header-actions">
+                    <button
+                      id="export-history-trigger"
+                      class="button button-secondary button-compact button-history-trigger"
+                      type="button"
+                      aria-haspopup="dialog"
+                      aria-controls="export-history-modal"
+                      aria-expanded="false"
+                    >
+                      View export history
+                    </button>
+                  </div>
                 </div>
 
                 <div class="settings-grid">
@@ -341,6 +353,47 @@
 
         </aside>
       </main>
+    </div>
+
+    <div id="export-history-modal" class="modal-shell hidden" aria-hidden="true">
+      <section
+        class="panel modal-card"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="export-history-title"
+        aria-describedby="export-history-description"
+      >
+        <div class="modal-header">
+          <div>
+            <p class="section-kicker">Local cache</p>
+            <h2 id="export-history-title">Export history</h2>
+          </div>
+          <button
+            id="export-history-close"
+            class="button button-secondary button-compact modal-close-button"
+            type="button"
+            aria-label="Close export history"
+          >
+            Close
+          </button>
+        </div>
+
+        <p id="export-history-description" class="supporting-text">
+          Review the local question cache used when skipping previously exported questions.
+        </p>
+
+        <div class="history-modal-meta">
+          <span id="export-history-count" class="count-pill">0 cached</span>
+          <p id="export-history-updated" class="history-modal-updated">Not loaded yet.</p>
+        </div>
+
+        <p id="export-history-status" class="history-modal-status" aria-live="polite"></p>
+        <div id="export-history-feedback" class="history-feedback hidden" aria-live="polite"></div>
+
+        <div class="history-list-wrap">
+          <ol id="export-history-list" class="history-list"></ol>
+        </div>
+      </section>
     </div>
   </body>
 </html>
