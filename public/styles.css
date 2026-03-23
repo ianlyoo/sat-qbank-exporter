@@ -398,6 +398,10 @@ button {
   overflow: visible;
 }
 
+.panel-form-primary .panel-form-body {
+  gap: var(--space-5);
+}
+
 .sidebar {
   display: grid;
   grid-template-rows: auto minmax(0, 1fr);
@@ -1439,6 +1443,21 @@ input[type="text"]:focus {
 }
 
 @media (min-width: 1081px) {
+  .panel-form-primary {
+    overflow: hidden;
+  }
+
+  .panel-form-body {
+    overflow-y: auto;
+    padding-right: var(--space-1);
+    padding-bottom: var(--space-4);
+    scrollbar-gutter: stable;
+  }
+
+  .panel-form-primary .panel-form-body {
+    gap: var(--space-4);
+  }
+
   .sidebar {
     position: static;
     top: auto;
