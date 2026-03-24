@@ -8,6 +8,7 @@
     "launch": "node scripts/launch.mjs",
     "package:release": "node scripts/package-release.mjs",
     "start": "node server.mjs",
+    "start:worker": "node worker.mjs",
     "test": "node --test"
   },
   "dependencies": {

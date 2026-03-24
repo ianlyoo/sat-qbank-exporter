@@ -1,0 +1,10 @@
+.git
+.DS_Store
+.sat-exporter
+node_modules
+downloads
+output
+dist
+playwright-report
+test-results
+npm-debug.log*

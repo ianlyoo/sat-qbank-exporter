@@ -111,6 +111,71 @@ Run tests:
 npm test
 ```
 
+## Hosted Architecture In Progress
+
+This repository now supports a split deployment model for hosted use:
+
+- `npm start` runs the web app server
+- `npm run start:worker` runs a dedicated export worker
+- `SAT_WORKER_BASE_URL` tells the web app to forward preview, export, job-status, and export-history requests to that worker
+
+That split is the first step toward a Vercel-friendly setup:
+
+- Vercel can host the web UI and lightweight API layer
+- a separate Node worker can keep Playwright, PDF rendering, filesystem-backed exports, and long-running jobs
+
+The local all-in-one workflow still works when `SAT_WORKER_BASE_URL` is not set.
+
+## Vercel Frontend + Worker Deployment
+
+The current recommended hosted setup is:
+
+- Deploy the frontend to Vercel as a static site
+- Deploy the worker separately as a long-running Node service
+- Set `SAT_WORKER_BASE_URL` in Vercel so `/api/*` rewrites point at the worker
+
+This repository includes [vercel.mjs](./vercel.mjs) for that setup. It:
+
+- skips Vercel install and build steps
+- serves the `public/` directory directly
+- rewrites `/api/:path*` to `${SAT_WORKER_BASE_URL}/api/:path*`
+
+Recommended worker host:
+
+- Default: Render background worker or web/private service with persistent disk
+- Runner-up: Fly.io if you want lower-level control over machines, volumes, and process groups
+
+Suggested first production shape:
+
+1. Put the Vercel frontend on its own project from this repository root.
+2. Deploy the worker from the same repo with `npm run start:worker`.
+3. Mount persistent storage on the worker for local export history and temporary artifacts.
+4. Move completed PDF files to object storage when you are ready to make downloads durable across restarts.
+
+## Render Worker Setup
+
+Use a Render `Web Service`, not a Background Worker, because the Vercel frontend needs a public HTTPS endpoint for `/api/*`.
+
+This repository includes:
+
+- [Dockerfile](./Dockerfile) for a Playwright-ready worker image
+- [render.yaml](./render.yaml) for a Render Blueprint
+
+Recommended Render flow:
+
+1. Push this repository to GitHub.
+2. In Render, create a new Blueprint or Web Service from the repo.
+3. If you use the Blueprint, Render will pick up [render.yaml](./render.yaml).
+4. Make sure the service is public and keep the health check path as `/api/health`.
+5. After the first deploy, copy the worker URL, such as `https://sat-qbank-worker.onrender.com`.
+6. In Vercel, set `SAT_WORKER_BASE_URL` to that Render URL and redeploy.
+
+Persistent storage notes:
+
+- `SAT_EXPORT_STORAGE_DIR` is set to `/var/data/sat-qbank` in [render.yaml](./render.yaml)
+- relative output paths like `./output` will resolve inside that mounted disk on the worker
+- export history will also default to that mounted disk unless `SAT_EXPORT_HISTORY_PATH` is set
+
 ## Notes
 
 - Use this project within College Board terms and your local copyright boundaries.

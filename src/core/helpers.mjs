@@ -1,6 +1,7 @@
 import path from 'node:path';
 
 import { DEFAULT_EXPORT_OPTIONS, DIFFICULTY_CODES, EXPORT_MODES } from './constants.mjs';
+import { resolveManagedPath } from './storage.mjs';
 
 export function parseBoolean(value, fallback = false) {
   if (value === undefined || value === null || value === '') {
@@ -132,7 +133,7 @@ export function normalizeExportOptions(input = {}) {
     chunkSize: parseInteger(merged.chunkSize, DEFAULT_EXPORT_OPTIONS.chunkSize),
     mode: String(merged.mode || DEFAULT_EXPORT_OPTIONS.mode),
     includeAnswerKey: parseBoolean(merged.includeAnswerKey, DEFAULT_EXPORT_OPTIONS.includeAnswerKey),
-    outputDir: path.resolve(String(merged.outputDir || DEFAULT_EXPORT_OPTIONS.outputDir)),
+    outputDir: resolveManagedPath(String(merged.outputDir || DEFAULT_EXPORT_OPTIONS.outputDir)),
     excludeActive: parseBoolean(merged.excludeActive, DEFAULT_EXPORT_OPTIONS.excludeActive),
     excludeExported: parseBoolean(merged.excludeExported, DEFAULT_EXPORT_OPTIONS.excludeExported),
     shuffle: parseBoolean(merged.shuffle, DEFAULT_EXPORT_OPTIONS.shuffle),

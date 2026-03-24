@@ -1,0 +1,21 @@
+services:
+  - type: web
+    name: sat-qbank-worker
+    runtime: docker
+    plan: starter
+    autoDeploy: true
+    healthCheckPath: /api/health
+    dockerfilePath: ./Dockerfile
+    envVars:
+      - key: HOST
+        value: 0.0.0.0
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: SAT_EXPORT_STORAGE_DIR
+        value: /var/data/sat-qbank
+    disk:
+      name: sat-qbank-data
+      mountPath: /var/data/sat-qbank
+      sizeGB: 10

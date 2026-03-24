@@ -1,8 +1,8 @@
 import { createHash } from 'node:crypto';
 import fs from 'node:fs/promises';
 import path from 'node:path';
+import { getDefaultExportHistoryPath } from './storage.mjs';
 
-const EXPORT_HISTORY_PATH = path.resolve('.sat-exporter/export-history.json');
 const EXPORT_HISTORY_VERSION = 2;
 
 function createInvalidCacheError(
@@ -290,7 +290,7 @@ function createBatchRecord(config, questions, metadata = {}) {
   );
 }
 
-export async function readExportHistorySnapshot(filePath = EXPORT_HISTORY_PATH, { strict = false } = {}) {
+export async function readExportHistorySnapshot(filePath = getDefaultExportHistoryPath(), { strict = false } = {}) {
   try {
     const raw = await fs.readFile(filePath, 'utf8');
     const parsed = JSON.parse(raw);
@@ -312,12 +312,17 @@ export async function readExportHistorySnapshot(filePath = EXPORT_HISTORY_PATH, 
   }
 }
 
-export async function loadExportHistory(filePath = EXPORT_HISTORY_PATH, { strict = false } = {}) {
+export async function loadExportHistory(filePath = getDefaultExportHistoryPath(), { strict = false } = {}) {
   const snapshot = await readExportHistorySnapshot(filePath, { strict });
   return new Set(snapshot.questionKeys);
 }
 
-export async function appendExportHistory(config, questions, filePath = EXPORT_HISTORY_PATH, metadata = {}) {
+export async function appendExportHistory(
+  config,
+  questions,
+  filePath = getDefaultExportHistoryPath(),
+  metadata = {}
+) {
   const snapshot = await readExportHistorySnapshot(filePath);
   const nextSnapshot = mergeSnapshots(
     snapshot,
@@ -332,7 +337,7 @@ export async function appendExportHistory(config, questions, filePath = EXPORT_H
   return writeExportHistorySnapshot(nextSnapshot, filePath);
 }
 
-export async function importExportHistory(history, filePath = EXPORT_HISTORY_PATH) {
+export async function importExportHistory(history, filePath = getDefaultExportHistoryPath()) {
   let incoming;
 
   try {
@@ -350,7 +355,7 @@ export function serializeExportHistorySnapshot(snapshot) {
   return JSON.stringify(buildPersistedPayload(snapshot), null, 2);
 }
 
-export async function clearExportHistory(filePath = EXPORT_HISTORY_PATH) {
+export async function clearExportHistory(filePath = getDefaultExportHistoryPath()) {
   try {
     await fs.unlink(filePath);
   } catch (error) {

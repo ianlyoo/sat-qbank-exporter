@@ -1,5 +1,4 @@
 import fs from 'node:fs/promises';
-import { randomUUID } from 'node:crypto';
 import { createServer } from 'node:http';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -9,11 +8,11 @@ import {
   clearExportHistory,
   importExportHistory,
   readExportHistorySnapshot,
-  serializeExportHistorySnapshot,
 } from '../core/export-history.mjs';
-import { mapLookupForUi, normalizeExportOptions } from '../core/helpers.mjs';
-import { formatProgress, previewExport, runExport } from '../core/exporter.mjs';
+import { mapLookupForUi } from '../core/helpers.mjs';
+import { previewExport, runExport } from '../core/exporter.mjs';
 import { fetchQuestionLookup } from '../core/qbank.mjs';
+import { createLocalWorkerClient } from './local-worker-client.mjs';
 
 const PUBLIC_DIR = fileURLToPath(new URL('../../public/', import.meta.url));
 
@@ -93,78 +92,8 @@ async function serveStaticFile(response, requestPath) {
   }
 }
 
-function createJobStore() {
-  const jobs = new Map();
-  let activeJobId = null;
-
-  return {
-    create(config) {
-      if (activeJobId) {
-        const activeJob = jobs.get(activeJobId);
-        if (activeJob && activeJob.state !== 'completed' && activeJob.state !== 'failed') {
-          const error = new Error('An export is already running. Wait for it to finish before starting a new one.');
-          error.code = 'ACTIVE_EXPORT_EXISTS';
-          error.jobId = activeJobId;
-          throw error;
-        }
-      }
-
-      const id = randomUUID();
-      const job = {
-        id,
-        state: 'queued',
-        phase: 'queued',
-        message: 'Export queued',
-        matchedCount: null,
-        exportCount: null,
-        currentBatch: null,
-        totalBatches: null,
-        savedFiles: [],
-        error: null,
-        outputDir: null,
-        config,
-        createdAt: new Date().toISOString(),
-      };
-
-      jobs.set(id, job);
-      activeJobId = id;
-      return job;
-    },
-    get(id) {
-      return jobs.get(id) || null;
-    },
-    getActive() {
-      if (!activeJobId) {
-        return null;
-      }
-
-      return jobs.get(activeJobId) || null;
-    },
-    update(id, patch) {
-      const current = jobs.get(id);
-      if (!current) {
-        return null;
-      }
-
-      const next = {
-        ...current,
-        ...patch,
-        savedFiles: patch.savedFiles ? [...patch.savedFiles] : current.savedFiles,
-        updatedAt: new Date().toISOString(),
-      };
-
-      jobs.set(id, next);
-
-       if (activeJobId === id && (next.state === 'completed' || next.state === 'failed')) {
-        activeJobId = null;
-      }
-
-      return next;
-    },
-  };
-}
-
 export function createAppServer({
+  workerClient,
   exportRunner = runExport,
   previewRunner = previewExport,
   lookupFetcher = fetchQuestionLookup,
@@ -172,7 +101,15 @@ export function createAppServer({
   historyReader = readExportHistorySnapshot,
   historyImporter = importExportHistory,
 } = {}) {
-  const jobStore = createJobStore();
+  const resolvedWorkerClient =
+    workerClient ||
+    createLocalWorkerClient({
+      exportRunner,
+      previewRunner,
+      clearHistoryRunner: clearHistory,
+      historyReader,
+      historyImporter,
+    });
 
   return createServer(async (request, response) => {
     const url = new URL(request.url || '/', 'http://localhost');
@@ -196,88 +133,59 @@ export function createAppServer({
 
       if (request.method === 'POST' && url.pathname === '/api/preview') {
         const body = await readJsonBody(request);
-        const preview = await previewRunner(body);
+        const preview = await resolvedWorkerClient.preview(body);
         sendJson(response, 200, { preview });
         return;
       }
 
       if (request.method === 'POST' && url.pathname === '/api/export') {
         const body = await readJsonBody(request);
-        const config = normalizeExportOptions(body);
-        const job = jobStore.create(config);
-
-        exportRunner(config, {
-          onProgress(progress) {
-            jobStore.update(job.id, progress);
-          },
-        })
-          .then((result) => {
-            jobStore.update(job.id, {
-              state: 'completed',
-              phase: 'completed',
-              message: 'Export complete',
-              matchedCount: result.matchedCount,
-              exportCount: result.exportCount,
-              totalBatches: result.totalBatches,
-              savedFiles: result.savedFiles,
-              outputDir: result.outputDir,
-              config: result.config,
-            });
-          })
-          .catch((error) => {
-            jobStore.update(job.id, {
-              state: 'failed',
-              phase: 'failed',
-              message: 'Export failed',
-              error: error.message,
-            });
-          });
-
-        sendJson(response, 202, { jobId: job.id });
+        const result = await resolvedWorkerClient.startExport(body);
+        sendJson(response, 202, result);
         return;
       }
 
       if (request.method === 'POST' && url.pathname === '/api/export-history/clear') {
-        await clearHistory();
-        sendJson(response, 200, { ok: true });
+        const result = await resolvedWorkerClient.clearHistory();
+        sendJson(response, 200, result);
         return;
       }
 
       if (request.method === 'GET' && url.pathname === '/api/export-history') {
-        const history = await historyReader(undefined, { strict: true });
+        const history = await resolvedWorkerClient.readHistory();
         sendJson(response, 200, { history: mapHistoryPayload(history) });
         return;
       }
 
       if (request.method === 'GET' && url.pathname === '/api/export-history/download') {
-        const history = await historyReader(undefined, { strict: true });
-        sendDownload(response, 'sat-export-history.json', serializeExportHistorySnapshot(history));
+        const contents = await resolvedWorkerClient.downloadHistory();
+        sendDownload(response, 'sat-export-history.json', contents);
         return;
       }
 
       if (request.method === 'POST' && url.pathname === '/api/export-history/import') {
         const body = await readJsonBody(request);
-        const history = await historyImporter(body.history ?? body);
+        const history = await resolvedWorkerClient.importHistory(body.history ?? body);
         sendJson(response, 200, { history: mapHistoryPayload(history) });
         return;
       }
 
       if (request.method === 'GET' && url.pathname === '/api/status') {
-        const activeJob = jobStore.getActive();
-        sendJson(response, 200, { job: activeJob ? formatProgress(activeJob) : null });
+        const job = await resolvedWorkerClient.getActiveJob();
+        sendJson(response, 200, { job });
         return;
       }
 
       if (request.method === 'GET' && url.pathname.startsWith('/api/status/')) {
         const jobId = url.pathname.replace('/api/status/', '');
-        const job = jobStore.get(jobId);
+        const job = await resolvedWorkerClient.getJob(jobId);
 
         if (!job) {
           sendJson(response, 404, { error: 'Export job not found.' });
           return;
         }
 
-        sendJson(response, 200, { job: formatProgress(job) });
+        sendJson(response, 200, { job });
         return;
       }
 
@@ -296,7 +204,8 @@ export function createAppServer({
         return;
       }
 
-      sendJson(response, 400, { error: error.message });
+      const statusCode = error.statusCode && Number.isInteger(error.statusCode) ? error.statusCode : 400;
+      sendJson(response, statusCode, { error: error.message });
     }
   });
 }
