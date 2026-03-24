@@ -1,3 +1,13 @@
+import {
+  clearBrowserHistory,
+  downloadBrowserHistory,
+  importBrowserHistory,
+  loadBrowserBootData,
+  loadBrowserHistory,
+  previewBrowserExport,
+  runBrowserExport,
+} from './browser-exporter.js';
+
 const DIFFICULTY_OPTIONS = ['Easy', 'Medium', 'Hard'];
 const ACTIVE_JOB_STORAGE_KEY = 'sat-exporter-active-job-id';
 const MODE_LABELS = {
@@ -9,6 +19,7 @@ const MODE_LABELS = {
 const state = {
   defaults: null,
   lookup: null,
+  runtimeMode: 'detecting',
   preview: null,
   previewStale: false,
   job: null,
@@ -260,18 +271,92 @@ function bindEvents() {
   });
 }
 
+function prepareBrowserPreviewWindows(count) {
+  const windows = [];
+  const total = Number.isFinite(count) ? count : 0;
+
+  for (let index = 0; index < total; index += 1) {
+    const previewWindow = window.open('', '_blank');
+
+    if (!previewWindow) {
+      windows.push(null);
+      continue;
+    }
+
+    previewWindow.document.write(`
+      <!doctype html>
+      <html lang="en">
+        <head>
+          <meta charset="utf-8" />
+          <title>Preparing printable packet...</title>
+          <style>
+            body {
+              margin: 0;
+              padding: 32px;
+              font-family: Georgia, "Times New Roman", serif;
+              color: #161616;
+              background: #f6f1e8;
+            }
+
+            main {
+              max-width: 720px;
+              margin: 0 auto;
+              background: #ffffff;
+              border: 1px solid #ddd3c3;
+              padding: 24px 28px;
+              box-shadow: 0 12px 30px rgba(45, 30, 12, 0.08);
+            }
+
+            h1 {
+              margin: 0 0 12px;
+              font-size: 28px;
+            }
+
+            p {
+              margin: 0;
+              line-height: 1.6;
+            }
+          </style>
+        </head>
+        <body>
+          <main>
+            <h1>Preparing printable packet...</h1>
+            <p>This tab will load the batch preview as soon as the questions finish rendering.</p>
+          </main>
+        </body>
+      </html>
+    `);
+    previewWindow.document.close();
+    windows.push(previewWindow);
+  }
+
+  return windows;
+}
+
 async function boot() {
   clearError();
   stopPolling();
   state.pending.boot = true;
-  const persistedJobId = readActiveJobId();
+  state.runtimeMode = 'detecting';
   render();
 
   try {
-    const defaultsResponse = await fetchJson('/api/defaults');
-    const lookupResponse = await fetchJson('/api/lookup');
-    state.defaults = defaultsResponse.defaults;
-    state.lookup = lookupResponse.lookup;
+    let apiRuntimeAvailable = false;
+
+    try {
+      const defaultsResponse = await fetchJson('/api/defaults');
+      const lookupResponse = await fetchJson('/api/lookup');
+      state.defaults = defaultsResponse.defaults;
+      state.lookup = lookupResponse.lookup;
+      apiRuntimeAvailable = true;
+    } catch {
+      const browserBootData = await loadBrowserBootData();
+      state.defaults = browserBootData.defaults;
+      state.lookup = browserBootData.lookup;
+    }
+
+    state.runtimeMode = apiRuntimeAvailable ? 'api' : 'browser';
+    const persistedJobId = apiRuntimeAvailable ? readActiveJobId() : '';
     state.form = createFormFromDefaults(state.defaults, state.lookup);
     state.preview = null;
     state.previewStale = false;
@@ -285,6 +370,7 @@ async function boot() {
       await requestPreview({ quietError: true });
     }
   } catch (error) {
+    state.runtimeMode = 'browser';
     setError(error.message || 'Unable to load local SAT exporter data.');
   } finally {
     state.pending.boot = false;
@@ -453,15 +539,19 @@ async function requestPreview(options = {}) {
   render();
 
   try {
-    const response = await fetchJson('/api/preview', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify(buildPayload()),
-    });
+    if (state.runtimeMode === 'browser') {
+      state.preview = await previewBrowserExport(buildPayload());
+    } else {
+      const response = await fetchJson('/api/preview', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify(buildPayload()),
+      });
 
-    state.preview = response.preview;
+      state.preview = response.preview;
+    }
     state.previewStale = false;
   } catch (error) {
     if (!options.quietError) {
@@ -493,6 +583,52 @@ async function startExport() {
   render();
 
   try {
+    if (state.runtimeMode === 'browser') {
+      state.jobId = '';
+      clearActiveJobId();
+      state.job = {
+        state: 'running',
+        phase: 'queued',
+        message: 'Preparing browser print previews…',
+        currentBatch: null,
+        totalBatches: state.preview?.exportBatches ?? null,
+        savedFiles: [],
+        outputDir: 'Browser print previews',
+        error: null,
+      };
+      render();
+
+      const previewWindows = prepareBrowserPreviewWindows(state.preview?.exportBatches ?? 0);
+
+      const result = await runBrowserExport(buildPayload(), {
+        previewWindows,
+        onProgress(progress) {
+          state.job = {
+            ...state.job,
+            ...progress,
+          };
+          render();
+        },
+      });
+
+      state.job = {
+        state: 'completed',
+        phase: 'completed',
+        message:
+          result.fallbackDownloadCount > 0
+            ? 'Some print previews were blocked and downloaded as HTML. Open them and use Save as PDF.'
+            : 'Print preview tabs are ready. Use Print > Save as PDF in each tab.',
+        currentBatch: result.totalBatches,
+        totalBatches: result.totalBatches,
+        savedFiles: result.savedFiles,
+        outputDir: result.outputDir,
+        error: null,
+      };
+      state.previewStale = false;
+      render();
+      return;
+    }
+
     const response = await fetchJson('/api/export', {
       method: 'POST',
       headers: {
@@ -543,9 +679,13 @@ async function handleClearHistoryClick() {
   renderActions();
 
   try {
-    await fetchJson('/api/export-history/clear', {
-      method: 'POST',
-    });
+    if (state.runtimeMode === 'browser') {
+      await clearBrowserHistory();
+    } else {
+      await fetchJson('/api/export-history/clear', {
+        method: 'POST',
+      });
+    }
 
     state.history.loaded = true;
     state.history.batches = [];
@@ -579,15 +719,20 @@ async function handleImportHistoryChange(event) {
   try {
     const contents = await file.text();
     const parsed = JSON.parse(contents);
-    const response = await fetchJson('/api/export-history/import', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json',
-      },
-      body: JSON.stringify({ history: parsed }),
-    });
+    if (state.runtimeMode === 'browser') {
+      const history = await importBrowserHistory(parsed);
+      applyHistoryResponse(history);
+    } else {
+      const response = await fetchJson('/api/export-history/import', {
+        method: 'POST',
+        headers: {
+          'content-type': 'application/json',
+        },
+        body: JSON.stringify({ history: parsed }),
+      });
 
-    applyHistoryResponse(response.history);
+      applyHistoryResponse(response.history);
+    }
     renderModal();
     await syncPreviewAfterHistoryMutation();
   } catch (error) {
@@ -600,6 +745,11 @@ async function handleImportHistoryChange(event) {
 }
 
 function downloadExportHistory() {
+  if (state.runtimeMode === 'browser') {
+    downloadBrowserHistory();
+    return;
+  }
+
   const link = document.createElement('a');
   link.href = '/api/export-history/download';
   link.download = 'sat-export-history.json';
@@ -662,8 +812,13 @@ async function loadExportHistory() {
   renderModal();
 
   try {
-    const response = await fetchJson('/api/export-history');
-    applyHistoryResponse(response.history);
+    if (state.runtimeMode === 'browser') {
+      const history = await loadBrowserHistory();
+      applyHistoryResponse(history);
+    } else {
+      const response = await fetchJson('/api/export-history');
+      applyHistoryResponse(response.history);
+    }
   } catch (error) {
     state.history.loaded = true;
     state.history.batches = [];
@@ -687,6 +842,10 @@ function applyHistoryResponse(history) {
 }
 
 async function pollStatus() {
+  if (state.runtimeMode === 'browser') {
+    return;
+  }
+
   if (!state.jobId) {
     return;
   }
@@ -737,7 +896,7 @@ function buildPayload() {
     questionCount: Number(state.form.questionCount),
     chunkSize: Number(state.form.chunkSize),
     mode: state.form.mode,
-    includeAnswerKey: false,
+    includeAnswerKey: state.form.mode === 'teacher',
     outputDir: state.form.outputDir,
     shuffle: state.form.shuffle,
     excludeActive: false,
@@ -799,7 +958,7 @@ function renderError() {
 
 function renderDataStatus() {
   if (state.pending.boot) {
-    dom.dataStatus.textContent = 'Loading local API metadata...';
+    dom.dataStatus.textContent = 'Loading SAT exporter data...';
     return;
   }
 
@@ -809,7 +968,11 @@ function renderDataStatus() {
   }
 
   const domainCount = getDomainsForSection(state.form.section).length;
-  dom.dataStatus.textContent = `${state.lookup.assessments.length} assessment${state.lookup.assessments.length === 1 ? '' : 's'}, ${state.lookup.sections.length} section${state.lookup.sections.length === 1 ? '' : 's'}, ${domainCount} domains in view.`;
+  const runtimeLabel =
+    state.runtimeMode === 'browser'
+      ? 'Browser-only mode with direct College Board fetches.'
+      : 'Local API mode.';
+  dom.dataStatus.textContent = `${runtimeLabel} ${state.lookup.assessments.length} assessment${state.lookup.assessments.length === 1 ? '' : 's'}, ${state.lookup.sections.length} section${state.lookup.sections.length === 1 ? '' : 's'}, ${domainCount} domains in view.`;
 }
 
 function renderSelects() {
@@ -974,8 +1137,12 @@ function renderActions() {
   dom.exportButton.textContent = exportLocked
     ? 'Export in progress'
     : state.pending.export
-      ? 'Starting export...'
-      : 'Start export job';
+      ? state.runtimeMode === 'browser'
+        ? 'Opening previews...'
+        : 'Starting export...'
+      : state.runtimeMode === 'browser'
+        ? 'Open print packets'
+        : 'Start export job';
 }
 
 function renderModal() {
@@ -1100,8 +1267,14 @@ function renderJob() {
     dom.jobPhase.textContent = 'Waiting for an export job';
     dom.jobPercent.textContent = '0%';
     dom.jobProgress.style.width = '0%';
-    dom.jobMessage.textContent = 'Preview the current configuration or start a render when you are ready.';
-    dom.jobNote.textContent = 'Exports stay local; progress updates automatically once a job starts.';
+    dom.jobMessage.textContent =
+      state.runtimeMode === 'browser'
+        ? 'Preview the current configuration or open print previews when you are ready.'
+        : 'Preview the current configuration or start a render when you are ready.';
+    dom.jobNote.textContent =
+      state.runtimeMode === 'browser'
+        ? 'Browser mode opens printable packet previews. Save each one as PDF from the print dialog.'
+        : 'Exports stay local; progress updates automatically once a job starts.';
     dom.jobId.textContent = '--';
     dom.jobBatch.textContent = '--';
     dom.jobSavedCount.textContent = '0';
@@ -1321,6 +1494,10 @@ function getProgressValue(job) {
 
 function getJobNote(job) {
   if (job.state === 'completed') {
+    if (state.runtimeMode === 'browser') {
+      return `Prepared ${job.savedFiles?.length || 0} printable packet${job.savedFiles?.length === 1 ? '' : 's'}. Save each preview as PDF from the print dialog.`;
+    }
+
     return `Saved ${job.savedFiles?.length || 0} file${job.savedFiles?.length === 1 ? '' : 's'} to ${job.outputDir || 'the chosen output folder'}.`;
   }
 
@@ -1329,10 +1506,14 @@ function getJobNote(job) {
   }
 
   if (job.state === 'queued') {
-    return 'The export request is registered locally and will begin polling for progress right away.';
+    return state.runtimeMode === 'browser'
+      ? 'The browser is preparing printable packet previews right away.'
+      : 'The export request is registered locally and will begin polling for progress right away.';
   }
 
-  return `Writing PDFs into ${job.outputDir || state.form.outputDir} while polling status every moment.`;
+  return state.runtimeMode === 'browser'
+    ? 'Building printable packet previews in the browser so you can save them as PDF without a server worker.'
+    : `Writing PDFs into ${job.outputDir || state.form.outputDir} while polling status every moment.`;
 }
 
 function formatCount(value) {

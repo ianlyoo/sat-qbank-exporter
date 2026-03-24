@@ -120,7 +120,7 @@ test('manage export history modal supports batch review, import, clear, and acce
     const page = await browser.newPage({ viewport: { width: 1440, height: 960 } });
 
     try {
-      await page.goto(baseUrl, { waitUntil: 'networkidle' });
+      await page.goto(baseUrl, { waitUntil: 'domcontentloaded' });
       await page.locator('.workspace-action-row #export-history-trigger').waitFor();
       assert.match(await page.locator('#export-history-trigger').textContent(), /Manage export history/);
       await page.locator('#export-history-trigger').focus();

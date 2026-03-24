@@ -143,7 +143,7 @@ async function getBoundingBox(page, selector, label) {
 }
 
 async function openLayout(page, baseUrl) {
-  await page.goto(baseUrl, { waitUntil: 'networkidle' });
+  await page.goto(baseUrl, { waitUntil: 'domcontentloaded' });
   await page.locator('#export-button').waitFor();
   await page.locator('#domains-chips .chip').first().waitFor();
 }

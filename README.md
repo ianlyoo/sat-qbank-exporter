@@ -131,14 +131,14 @@ The local all-in-one workflow still works when `SAT_WORKER_BASE_URL` is not set.
 The current recommended hosted setup is:
 
 - Deploy the frontend to Vercel as a static site
-- Deploy the worker separately as a long-running Node service
-- Set `SAT_WORKER_BASE_URL` in Vercel so `/api/*` rewrites point at the worker
+- Use the built-in browser mode so the app fetches College Board data directly
+- Do not configure any deployment-time environment variables for the workerless path
 
-This repository includes [vercel.mjs](./vercel.mjs) for that setup. It:
+This repository includes [vercel.json](./vercel.json) for that setup. It:
 
 - skips Vercel install and build steps
 - serves the `public/` directory directly
-- rewrites `/api/:path*` to `${SAT_WORKER_BASE_URL}/api/:path*`
+- leaves `/api/*` unconfigured so the browser can fall back to workerless mode
 
 Recommended worker host:
 

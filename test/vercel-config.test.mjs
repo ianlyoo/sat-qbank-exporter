@@ -1,23 +1,17 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
 import path from 'node:path';
 import test from 'node:test';
-import { pathToFileURL } from 'node:url';
 
-test('vercel config proxies /api requests to the configured worker URL', async () => {
-  process.env.SAT_WORKER_BASE_URL = 'https://sat-qbank-worker.example.com/';
+test('vercel config supports workerless static deployments', async () => {
+  const configPath = path.resolve('vercel.json');
+  const config = JSON.parse(await fs.readFile(configPath, 'utf8'));
 
-  const moduleUrl = `${pathToFileURL(path.resolve('vercel.mjs')).href}?test=${Date.now()}`;
-  const { config } = await import(moduleUrl);
-
+  assert.equal(config.$schema, 'https://openapi.vercel.sh/vercel.json');
   assert.equal(config.framework, null);
   assert.equal(config.installCommand, '');
   assert.equal(config.buildCommand, '');
   assert.equal(config.outputDirectory, 'public');
   assert.equal(config.cleanUrls, true);
-  assert.deepEqual(config.rewrites, [
-    {
-      source: '/api/:path*',
-      destination: 'https://sat-qbank-worker.example.com/api/:path*',
-    },
-  ]);
+  assert.ok(!('rewrites' in config));
 });

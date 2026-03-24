@@ -90,7 +90,7 @@ test('mode options use the updated labels and hide the appendix toggle', async (
   assert.match(html, /<strong>Default<\/strong>/);
   assert.match(html, /<strong>Default \+ Key<\/strong>/);
   assert.match(html, /Questions only\./);
-  assert.match(html, /Questions with answers and rationale\./);
+  assert.match(html, /Questions first, then an answer key and rationale appendix\./);
   assert.match(html, /Minimal print layout\./);
   assert.doesNotMatch(html, /Append answer key \+ rationale/);
   assert.doesNotMatch(html, /id="include-answer-key"/);
