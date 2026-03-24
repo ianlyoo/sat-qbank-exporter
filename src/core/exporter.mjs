@@ -261,7 +261,10 @@ export async function runExport(input, { onProgress } = {}) {
       const filename = buildFilename(batchNumber, printableBatch, prepared.config.mode);
       const filePath = path.join(prepared.config.outputDir, filename);
       await renderPdfBatch(browser, html, filePath);
-      await appendExportHistory(prepared.config, batch);
+      await appendExportHistory(prepared.config, batch, undefined, {
+        batchNumber,
+        filename,
+      });
       savedFiles.push(filePath);
 
       emitProgress(onProgress, {

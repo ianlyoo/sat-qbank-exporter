@@ -1,7 +1,9 @@
 import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
 import test from 'node:test';
+import { fileURLToPath } from 'node:url';
 
-import { __testDoesPreviewMatchForm, __testIsPreviewComparable } from '../public/app.js';
+import { __testDoesPreviewMatchForm, __testFormatMode, __testIsPreviewComparable } from '../public/app.js';
 
 function createBaseConfig() {
   return {
@@ -73,4 +75,23 @@ test('preview comparability requires at least one domain, skill, and difficulty'
   );
 
   assert.equal(__testIsPreviewComparable(createBaseConfig()), true);
+});
+
+test('preview mode labels use the updated UI copy', () => {
+  assert.equal(__testFormatMode('student'), 'Default');
+  assert.equal(__testFormatMode('teacher'), 'Default + Key');
+  assert.equal(__testFormatMode('clean'), 'Clean');
+});
+
+test('mode options use the updated labels and hide the appendix toggle', async () => {
+  const indexPath = fileURLToPath(new URL('../public/index.html', import.meta.url));
+  const html = await fs.readFile(indexPath, 'utf8');
+
+  assert.match(html, /<strong>Default<\/strong>/);
+  assert.match(html, /<strong>Default \+ Key<\/strong>/);
+  assert.match(html, /Questions only\./);
+  assert.match(html, /Questions with answers and rationale\./);
+  assert.match(html, /Minimal print layout\./);
+  assert.doesNotMatch(html, /Append answer key \+ rationale/);
+  assert.doesNotMatch(html, /id="include-answer-key"/);
 });

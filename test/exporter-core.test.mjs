@@ -5,6 +5,7 @@ import { EXPORT_MODES } from '../src/core/constants.mjs';
 import {
   applyFilters,
   buildFilename,
+  createHeaderText,
   normalizeDifficultyFilters,
   normalizeExportOptions,
   resolveLookup,
@@ -93,6 +94,22 @@ test('buildFilename uses batch number and mode slug', () => {
   assert.equal(filename, '003_Q1-Q9_teacher.pdf');
 });
 
+test('createHeaderText keeps PDF titles concise', () => {
+  const title = createHeaderText({
+    assessment: 'SAT',
+    section: 'Reading and Writing',
+    domains: [
+      'Information and Ideas',
+      'Craft and Structure',
+      'Expression of Ideas',
+      'Standard English Conventions',
+    ],
+    batchNumber: 1,
+  });
+
+  assert.equal(title, 'SAT Reading and Writing - Batch 1');
+});
+
 test('renderDocumentHtml includes teacher answer block only in teacher mode', () => {
   const batch = [
     {
@@ -151,10 +168,17 @@ test('renderDocumentHtml includes fixed page layout scaffolding', () => {
   assert.match(html, /Practice Packet/);
   assert.match(html, /Batch Index/);
   assert.match(html, /Included Questions/);
+  assert.match(html, /Included Domains/);
+  assert.match(html, /<dt>Mode<\/dt>/);
+  assert.match(html, /Default/);
+  assert.match(html, /Questions only, plus an answer appendix\./);
   assert.match(html, /Linear functions/);
+  assert.match(html, /Algebra/);
   assert.match(html, /Answer Key and Rationale/);
   assert.match(html, /The following pages contain the correct answer and explanation/);
   assert.match(html, /answer-appendix-template/);
   assert.match(html, /answer-divider-page-template/);
   assert.match(html, /cover-page-template/);
+  assert.doesNotMatch(html, /3-up with automatic 2-up fallback/);
+  assert.doesNotMatch(html, /Question pages followed by an answer key and rationale appendix\./);
 });

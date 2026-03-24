@@ -158,12 +158,33 @@ test('server clears the local export history cache on demand', async () => {
 });
 
 test('server exposes export history entries for the in-app modal', async () => {
+  const historySnapshot = {
+    updatedAt: '2026-03-23T12:00:00.000Z',
+    questionKeys: ['SAT::Math::Q1', 'SAT::Math::Q2'],
+    legacyQuestionKeyCount: 0,
+    batches: [
+      {
+        id: 'batch-1',
+        exportedAt: '2026-03-23T12:00:00.000Z',
+        assessment: 'SAT',
+        section: 'Math',
+        batchNumber: 1,
+        filename: '001_Q1-Q2_student.pdf',
+        mode: 'student',
+        includeAnswerKey: false,
+        questionCount: 2,
+        includedDomains: ['Algebra'],
+        questions: [
+          { questionId: 'Q1', domain: 'Algebra', skill: 'Linear functions', difficultyLabel: 'Easy' },
+          { questionId: 'Q2', domain: 'Algebra', skill: 'Linear functions', difficultyLabel: 'Medium' },
+        ],
+      },
+    ],
+  };
+
   const server = createAppServer({
     lookupFetcher: async () => lookupFixture,
-    historyReader: async () => ({
-      updatedAt: '2026-03-23T12:00:00.000Z',
-      questionKeys: ['SAT::Math::Q1', 'SAT::Math::Q2'],
-    }),
+    historyReader: async () => historySnapshot,
   });
 
   await new Promise((resolve) => server.listen(0, resolve));
@@ -177,11 +198,153 @@ test('server exposes export history entries for the in-app modal', async () => {
     assert.equal(response.status, 200);
     assert.deepEqual(body, {
       history: {
-        count: 2,
+        batchCount: 1,
+        questionCount: 2,
+        legacyQuestionKeyCount: 0,
         updatedAt: '2026-03-23T12:00:00.000Z',
-        questionKeys: ['SAT::Math::Q1', 'SAT::Math::Q2'],
+        batches: historySnapshot.batches,
       },
     });
+  } finally {
+    await new Promise((resolve, reject) => {
+      server.close((error) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve();
+      });
+    });
+  }
+});
+
+test('server downloads export history as a JSON attachment', async () => {
+  const server = createAppServer({
+    lookupFetcher: async () => lookupFixture,
+    historyReader: async () => ({
+      version: 2,
+      updatedAt: '2026-03-23T12:00:00.000Z',
+      legacyQuestionKeys: [],
+      batches: [
+        {
+          id: 'batch-1',
+          exportedAt: '2026-03-23T12:00:00.000Z',
+          assessment: 'SAT',
+          section: 'Math',
+          batchNumber: 1,
+          filename: '001_Q1-Q2_student.pdf',
+          mode: 'student',
+          includeAnswerKey: false,
+          questionCount: 2,
+          includedDomains: ['Algebra'],
+          questions: [
+            { questionId: 'Q1', domain: 'Algebra', skill: 'Linear functions', difficultyLabel: 'Easy' },
+            { questionId: 'Q2', domain: 'Algebra', skill: 'Linear functions', difficultyLabel: 'Medium' },
+          ],
+        },
+      ],
+      questionKeys: ['SAT::Math::Q1', 'SAT::Math::Q2'],
+      legacyQuestionKeyCount: 0,
+    }),
+  });
+
+  await new Promise((resolve) => server.listen(0, resolve));
+  const port = server.address().port;
+  const baseUrl = `http://127.0.0.1:${port}`;
+
+  try {
+    const response = await fetch(`${baseUrl}/api/export-history/download`);
+    const text = await response.text();
+    const parsed = JSON.parse(text);
+
+    assert.equal(response.status, 200);
+    assert.match(response.headers.get('content-disposition') || '', /sat-export-history\.json/);
+    assert.equal(parsed.version, 2);
+    assert.equal(parsed.batches.length, 1);
+    assert.equal(parsed.batches[0].filename, '001_Q1-Q2_student.pdf');
+  } finally {
+    await new Promise((resolve, reject) => {
+      server.close((error) => {
+        if (error) {
+          reject(error);
+          return;
+        }
+        resolve();
+      });
+    });
+  }
+});
+
+test('server imports export history files and returns the merged batch view', async () => {
+  let importedHistory = null;
+
+  const server = createAppServer({
+    lookupFetcher: async () => lookupFixture,
+    historyImporter: async (history) => {
+      importedHistory = history;
+      return {
+        updatedAt: '2026-03-24T12:00:00.000Z',
+        questionKeys: ['SAT::Math::Q1'],
+        legacyQuestionKeyCount: 0,
+        batches: [
+          {
+            id: 'batch-1',
+            exportedAt: '2026-03-24T12:00:00.000Z',
+            assessment: 'SAT',
+            section: 'Math',
+            batchNumber: 1,
+            filename: '001_Q1_student.pdf',
+            mode: 'student',
+            includeAnswerKey: false,
+            questionCount: 1,
+            includedDomains: ['Algebra'],
+            questions: [
+              { questionId: 'Q1', domain: 'Algebra', skill: 'Linear functions', difficultyLabel: 'Easy' },
+            ],
+          },
+        ],
+      };
+    },
+  });
+
+  await new Promise((resolve) => server.listen(0, resolve));
+  const port = server.address().port;
+  const baseUrl = `http://127.0.0.1:${port}`;
+
+  try {
+    const response = await fetch(`${baseUrl}/api/export-history/import`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        history: {
+          version: 2,
+          updatedAt: '2026-03-24T12:00:00.000Z',
+          legacyQuestionKeys: [],
+          batches: [
+            {
+              id: 'batch-1',
+              exportedAt: '2026-03-24T12:00:00.000Z',
+              assessment: 'SAT',
+              section: 'Math',
+              batchNumber: 1,
+              filename: '001_Q1_student.pdf',
+              mode: 'student',
+              includeAnswerKey: false,
+              questions: [
+                { questionId: 'Q1', domain: 'Algebra', skill: 'Linear functions', difficultyLabel: 'Easy' },
+              ],
+            },
+          ],
+        },
+      }),
+    });
+    const body = await response.json();
+
+    assert.equal(response.status, 200);
+    assert.equal(importedHistory.batches.length, 1);
+    assert.equal(body.history.batchCount, 1);
+    assert.equal(body.history.questionCount, 1);
+    assert.equal(body.history.batches[0].filename, '001_Q1_student.pdf');
   } finally {
     await new Promise((resolve, reject) => {
       server.close((error) => {

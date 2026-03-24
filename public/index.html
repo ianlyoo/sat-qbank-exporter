@@ -75,18 +75,6 @@
                     <p class="section-kicker">Output behavior</p>
                     <h3>Set delivery and run rules</h3>
                   </div>
-                  <div class="workbench-card-header-actions">
-                    <button
-                      id="export-history-trigger"
-                      class="button button-secondary button-compact button-history-trigger"
-                      type="button"
-                      aria-haspopup="dialog"
-                      aria-controls="export-history-modal"
-                      aria-expanded="false"
-                    >
-                      View export history
-                    </button>
-                  </div>
                 </div>
 
                 <div class="settings-grid">
@@ -96,22 +84,22 @@
                       <label class="mode-option">
                         <input type="radio" name="mode" value="student">
                         <span class="mode-copy">
-                          <strong>Student</strong>
-                          <small>Prompt-only packets</small>
+                          <strong>Default</strong>
+                          <small>Questions only.</small>
                         </span>
                       </label>
                       <label class="mode-option">
                         <input type="radio" name="mode" value="teacher">
                         <span class="mode-copy">
-                          <strong>Teacher + key</strong>
-                          <small>Include the answer sheet and rationale at the end.</small>
+                          <strong>Default + Key</strong>
+                          <small>Questions with answers and rationale.</small>
                         </span>
                       </label>
                       <label class="mode-option">
                         <input type="radio" name="mode" value="clean">
                         <span class="mode-copy">
                           <strong>Clean</strong>
-                          <small>Minimal headers and keys</small>
+                          <small>Minimal print layout.</small>
                         </span>
                       </label>
                     </div>
@@ -132,14 +120,6 @@
                         <span>
                           <strong>Skip previously exported questions</strong>
                           <small>Use the local export cache to avoid reusing questions saved in earlier runs.</small>
-                        </span>
-                      </label>
-
-                      <label class="toggle-card">
-                        <input id="include-answer-key" name="includeAnswerKey" type="checkbox">
-                        <span>
-                          <strong>Append answer key + rationale</strong>
-                          <small>Add a separate answer and explanation section after the question pages in each batch.</small>
                         </span>
                       </label>
                     </div>
@@ -223,8 +203,15 @@
           </section>
 
           <div class="action-row workspace-action-row">
-            <button id="clear-history-button" class="button button-secondary button-clear-history" type="button">
-              Clear export history
+            <button
+              id="export-history-trigger"
+              class="button button-secondary button-history-trigger"
+              type="button"
+              aria-haspopup="dialog"
+              aria-controls="export-history-modal"
+              aria-expanded="false"
+            >
+              Manage export history
             </button>
             <button id="preview-button" class="button button-secondary" type="button">
               Preview export
@@ -379,12 +366,26 @@
         </div>
 
         <p id="export-history-description" class="supporting-text">
-          Review the local question cache used when skipping previously exported questions.
+          Review, download, add, or clear the local batch history used for skip-export logic.
         </p>
 
         <div class="history-modal-meta">
-          <span id="export-history-count" class="count-pill">0 cached</span>
+          <span id="export-history-count" class="count-pill">0 batches</span>
+          <span id="export-history-question-count" class="count-pill">0 questions</span>
           <p id="export-history-updated" class="history-modal-updated">Not loaded yet.</p>
+        </div>
+
+        <div class="history-modal-actions">
+          <button id="clear-history-button" class="button button-secondary button-compact button-clear-history" type="button">
+            Clear export history
+          </button>
+          <button id="export-history-download" class="button button-secondary button-compact" type="button">
+            Download export history
+          </button>
+          <button id="export-history-import" class="button button-secondary button-compact" type="button">
+            Add export history
+          </button>
+          <input id="export-history-import-input" class="hidden" type="file" accept="application/json">
         </div>
 
         <p id="export-history-status" class="history-modal-status" aria-live="polite"></p>

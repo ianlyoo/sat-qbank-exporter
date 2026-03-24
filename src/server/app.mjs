@@ -5,7 +5,12 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { DEFAULT_EXPORT_OPTIONS } from '../core/constants.mjs';
-import { clearExportHistory, readExportHistorySnapshot } from '../core/export-history.mjs';
+import {
+  clearExportHistory,
+  importExportHistory,
+  readExportHistorySnapshot,
+  serializeExportHistorySnapshot,
+} from '../core/export-history.mjs';
 import { mapLookupForUi, normalizeExportOptions } from '../core/helpers.mjs';
 import { formatProgress, previewExport, runExport } from '../core/exporter.mjs';
 import { fetchQuestionLookup } from '../core/qbank.mjs';
@@ -26,6 +31,25 @@ function sendJson(response, statusCode, payload) {
     'cache-control': 'no-store',
   });
   response.end(JSON.stringify(payload));
+}
+
+function sendDownload(response, filename, contents) {
+  response.writeHead(200, {
+    'content-type': 'application/json; charset=utf-8',
+    'cache-control': 'no-store',
+    'content-disposition': `attachment; filename="${filename}"`,
+  });
+  response.end(contents);
+}
+
+function mapHistoryPayload(history) {
+  return {
+    batchCount: history.batches.length,
+    questionCount: history.questionKeys.length,
+    legacyQuestionKeyCount: history.legacyQuestionKeyCount,
+    updatedAt: history.updatedAt,
+    batches: history.batches,
+  };
 }
 
 async function readJsonBody(request) {
@@ -146,6 +170,7 @@ export function createAppServer({
   lookupFetcher = fetchQuestionLookup,
   clearHistory = clearExportHistory,
   historyReader = readExportHistorySnapshot,
+  historyImporter = importExportHistory,
 } = {}) {
   const jobStore = createJobStore();
 
@@ -220,13 +245,20 @@ export function createAppServer({
 
       if (request.method === 'GET' && url.pathname === '/api/export-history') {
         const history = await historyReader(undefined, { strict: true });
-        sendJson(response, 200, {
-          history: {
-            count: history.questionKeys.length,
-            updatedAt: history.updatedAt,
-            questionKeys: history.questionKeys,
-          },
-        });
+        sendJson(response, 200, { history: mapHistoryPayload(history) });
+        return;
+      }
+
+      if (request.method === 'GET' && url.pathname === '/api/export-history/download') {
+        const history = await historyReader(undefined, { strict: true });
+        sendDownload(response, 'sat-export-history.json', serializeExportHistorySnapshot(history));
+        return;
+      }
+
+      if (request.method === 'POST' && url.pathname === '/api/export-history/import') {
+        const body = await readJsonBody(request);
+        const history = await historyImporter(body.history ?? body);
+        sendJson(response, 200, { history: mapHistoryPayload(history) });
         return;
       }
 

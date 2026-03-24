@@ -184,7 +184,8 @@ export function selectQuestions(questions, questionCount, shuffle) {
 }
 
 export function createHeaderText({ assessment, section, domains, batchNumber }) {
-  return `${assessment} ${section} ${domains.join(', ')} - Batch ${batchNumber}`;
+  void domains;
+  return `${assessment} ${section} - Batch ${batchNumber}`;
 }
 
 export function createActiveIdSet(lookup, section) {

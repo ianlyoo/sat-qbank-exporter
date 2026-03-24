@@ -1,5 +1,10 @@
 const DIFFICULTY_OPTIONS = ['Easy', 'Medium', 'Hard'];
 const ACTIVE_JOB_STORAGE_KEY = 'sat-exporter-active-job-id';
+const MODE_LABELS = {
+  student: 'Default',
+  teacher: 'Default + Key',
+  clean: 'Clean',
+};
 
 const state = {
   defaults: null,
@@ -15,6 +20,7 @@ const state = {
     export: false,
     clearHistory: false,
     history: false,
+    importHistory: false,
   },
   pollTimer: null,
   sessionStorageAvailable: true,
@@ -22,8 +28,10 @@ const state = {
   history: {
     open: false,
     loaded: false,
-    entries: [],
+    batches: [],
     updatedAt: null,
+    questionCount: 0,
+    legacyQuestionKeyCount: 0,
     error: '',
     lastFocusedElement: null,
   },
@@ -74,7 +82,6 @@ function cacheDom() {
   dom.chunkSize = document.getElementById('chunk-size');
   dom.outputDir = document.getElementById('output-dir');
   dom.shuffle = document.getElementById('shuffle');
-  dom.includeAnswerKey = document.getElementById('include-answer-key');
   dom.excludeExported = document.getElementById('exclude-exported');
   dom.previewButton = document.getElementById('preview-button');
   dom.exportButton = document.getElementById('export-button');
@@ -83,10 +90,14 @@ function cacheDom() {
   dom.exportHistoryModal = document.getElementById('export-history-modal');
   dom.exportHistoryClose = document.getElementById('export-history-close');
   dom.exportHistoryCount = document.getElementById('export-history-count');
+  dom.exportHistoryQuestionCount = document.getElementById('export-history-question-count');
   dom.exportHistoryUpdated = document.getElementById('export-history-updated');
   dom.exportHistoryStatus = document.getElementById('export-history-status');
   dom.exportHistoryFeedback = document.getElementById('export-history-feedback');
   dom.exportHistoryList = document.getElementById('export-history-list');
+  dom.exportHistoryDownload = document.getElementById('export-history-download');
+  dom.exportHistoryImport = document.getElementById('export-history-import');
+  dom.exportHistoryImportInput = document.getElementById('export-history-import-input');
   dom.previewState = document.getElementById('preview-state');
   dom.previewMatched = document.getElementById('preview-matched');
   dom.previewExportCount = document.getElementById('preview-export-count');
@@ -143,9 +154,6 @@ function bindEvents() {
     updateForm({ shuffle: event.target.checked });
   });
 
-  dom.includeAnswerKey.addEventListener('change', (event) => {
-    updateForm({ includeAnswerKey: event.target.checked });
-  });
   dom.excludeExported.addEventListener('change', (event) => {
     updateForm({ excludeExported: event.target.checked });
   });
@@ -174,6 +182,18 @@ function bindEvents() {
 
   dom.clearHistoryButton.addEventListener('click', async () => {
     await handleClearHistoryClick();
+  });
+
+  dom.exportHistoryDownload.addEventListener('click', () => {
+    downloadExportHistory();
+  });
+
+  dom.exportHistoryImport.addEventListener('click', () => {
+    dom.exportHistoryImportInput?.click();
+  });
+
+  dom.exportHistoryImportInput.addEventListener('change', async (event) => {
+    await handleImportHistoryChange(event);
   });
 
   dom.exportHistoryTrigger.addEventListener('click', async () => {
@@ -288,7 +308,7 @@ function createFormFromDefaults(defaults, lookup) {
       questionCount: defaults?.questionCount ?? 20,
       chunkSize: defaults?.chunkSize ?? 20,
       mode: defaults?.mode || 'student',
-      includeAnswerKey: Boolean(defaults?.includeAnswerKey ?? false),
+      includeAnswerKey: false,
       outputDir: defaults?.outputDir || './output',
       shuffle: Boolean(defaults?.shuffle ?? true),
       excludeExported: Boolean(defaults?.excludeExported ?? false),
@@ -378,10 +398,6 @@ export function __testDoesPreviewMatchForm(preview, form) {
 
 export function __testIsPreviewComparable(form) {
   return isPreviewComparable(form);
-}
-
-export function __testParseHistoryEntry(entry) {
-  return parseHistoryEntry(entry);
 }
 
 export function __testFormatHistoryUpdatedAt(value) {
@@ -532,24 +548,75 @@ async function handleClearHistoryClick() {
     });
 
     state.history.loaded = true;
-    state.history.entries = [];
+    state.history.batches = [];
     state.history.updatedAt = null;
+    state.history.questionCount = 0;
+    state.history.legacyQuestionKeyCount = 0;
     state.history.error = '';
     renderModal();
-
-    if (isPreviewComparable(state.form)) {
-      await requestPreview({ quietError: true });
-    } else {
-      state.preview = null;
-      state.previewStale = false;
-      render();
-    }
+    await syncPreviewAfterHistoryMutation();
   } catch (error) {
     setError(error.message || 'Unable to clear the local export history.');
   } finally {
     state.pending.clearHistory = false;
     renderActions();
   }
+}
+
+async function handleImportHistoryChange(event) {
+  const [file] = event.target.files || [];
+  event.target.value = '';
+
+  if (!file) {
+    return;
+  }
+
+  clearError();
+  state.pending.importHistory = true;
+  renderActions();
+  renderModal();
+
+  try {
+    const contents = await file.text();
+    const parsed = JSON.parse(contents);
+    const response = await fetchJson('/api/export-history/import', {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({ history: parsed }),
+    });
+
+    applyHistoryResponse(response.history);
+    renderModal();
+    await syncPreviewAfterHistoryMutation();
+  } catch (error) {
+    setError(error.message || 'Unable to add the selected export history file.');
+  } finally {
+    state.pending.importHistory = false;
+    renderActions();
+    renderModal();
+  }
+}
+
+function downloadExportHistory() {
+  const link = document.createElement('a');
+  link.href = '/api/export-history/download';
+  link.download = 'sat-export-history.json';
+  document.body.append(link);
+  link.click();
+  link.remove();
+}
+
+async function syncPreviewAfterHistoryMutation() {
+  if (isPreviewComparable(state.form)) {
+    await requestPreview({ quietError: true });
+    return;
+  }
+
+  state.preview = null;
+  state.previewStale = false;
+  render();
 }
 
 async function openHistoryModal() {
@@ -596,18 +663,27 @@ async function loadExportHistory() {
 
   try {
     const response = await fetchJson('/api/export-history');
-    state.history.loaded = true;
-    state.history.entries = Array.isArray(response.history?.questionKeys) ? response.history.questionKeys : [];
-    state.history.updatedAt = response.history?.updatedAt || null;
+    applyHistoryResponse(response.history);
   } catch (error) {
     state.history.loaded = true;
-    state.history.entries = [];
+    state.history.batches = [];
     state.history.updatedAt = null;
+    state.history.questionCount = 0;
+    state.history.legacyQuestionKeyCount = 0;
     state.history.error = error.message || 'Unable to load the local export history.';
   } finally {
     state.pending.history = false;
     renderModal();
   }
+}
+
+function applyHistoryResponse(history) {
+  state.history.loaded = true;
+  state.history.batches = Array.isArray(history?.batches) ? history.batches : [];
+  state.history.updatedAt = history?.updatedAt || null;
+  state.history.questionCount = Number(history?.questionCount) || 0;
+  state.history.legacyQuestionKeyCount = Number(history?.legacyQuestionKeyCount) || 0;
+  state.history.error = '';
 }
 
 async function pollStatus() {
@@ -661,7 +737,7 @@ function buildPayload() {
     questionCount: Number(state.form.questionCount),
     chunkSize: Number(state.form.chunkSize),
     mode: state.form.mode,
-    includeAnswerKey: state.form.includeAnswerKey,
+    includeAnswerKey: false,
     outputDir: state.form.outputDir,
     shuffle: state.form.shuffle,
     excludeActive: false,
@@ -849,7 +925,6 @@ function renderInputs() {
   dom.chunkSize.value = state.form.chunkSize;
   dom.outputDir.value = state.form.outputDir;
   dom.shuffle.checked = state.form.shuffle;
-  dom.includeAnswerKey.checked = state.form.includeAnswerKey;
   dom.excludeExported.checked = state.form.excludeExported;
 
   document.querySelectorAll('input[name="mode"]').forEach((input) => {
@@ -861,7 +936,6 @@ function renderInputs() {
   dom.chunkSize.disabled = disabled;
   dom.outputDir.disabled = disabled;
   dom.shuffle.disabled = disabled;
-  dom.includeAnswerKey.disabled = disabled;
   dom.excludeExported.disabled = disabled;
   document.querySelectorAll('input[name="mode"]').forEach((input) => {
     input.disabled = disabled;
@@ -869,11 +943,19 @@ function renderInputs() {
 }
 
 function renderActions() {
-  const busy = state.pending.boot || state.pending.preview || state.pending.export || state.pending.clearHistory;
+  const busy =
+    state.pending.boot ||
+    state.pending.preview ||
+    state.pending.export ||
+    state.pending.clearHistory ||
+    state.pending.importHistory;
   const exportLocked = hasActiveJob();
 
   dom.reloadButton.disabled = busy;
-  dom.clearHistoryButton.disabled = busy || exportLocked;
+  dom.clearHistoryButton.disabled = busy;
+  dom.exportHistoryDownload.disabled = state.pending.history || state.pending.importHistory;
+  dom.exportHistoryImport.disabled = busy;
+  dom.exportHistoryImportInput.disabled = busy;
   dom.exportHistoryTrigger.disabled = state.pending.boot;
   dom.previewButton.disabled = busy || !state.lookup;
   dom.exportButton.disabled = busy || !state.lookup || exportLocked;
@@ -883,8 +965,10 @@ function renderActions() {
     : state.clearHistoryConfirm
       ? 'Are You Sure?'
       : 'Clear export history';
-  dom.clearHistoryButton.className = `button ${
-    state.clearHistoryConfirm ? 'button-danger button-clear-history button-clear-history-confirm' : 'button-secondary button-clear-history'
+  dom.clearHistoryButton.className = `button button-compact ${
+    state.clearHistoryConfirm
+      ? 'button-danger button-clear-history button-clear-history-confirm'
+      : 'button-secondary button-clear-history'
   }`;
   dom.previewButton.textContent = state.pending.preview ? 'Previewing...' : 'Preview export';
   dom.exportButton.textContent = exportLocked
@@ -899,8 +983,9 @@ function renderModal() {
   document.body.classList.toggle('modal-open', isOpen);
   dom.exportHistoryModal.classList.toggle('hidden', !isOpen);
   dom.exportHistoryModal.setAttribute('aria-hidden', isOpen ? 'false' : 'true');
-   dom.exportHistoryTrigger?.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
-  dom.exportHistoryCount.textContent = `${state.history.entries.length.toLocaleString()} cached`;
+  dom.exportHistoryTrigger?.setAttribute('aria-expanded', isOpen ? 'true' : 'false');
+  dom.exportHistoryCount.textContent = `${state.history.batches.length.toLocaleString()} batches`;
+  dom.exportHistoryQuestionCount.textContent = `${state.history.questionCount.toLocaleString()} questions`;
   dom.exportHistoryUpdated.textContent = formatHistoryUpdatedAt(state.history.updatedAt);
 
   if (!isOpen) {
@@ -909,39 +994,56 @@ function renderModal() {
 
   const isLoading = state.pending.history;
   const hasError = Boolean(state.history.error);
-  const isEmpty = state.history.loaded && !hasError && !state.history.entries.length;
+  const hasBatches = state.history.batches.length > 0;
+  const hasLegacyOnly = !hasBatches && state.history.legacyQuestionKeyCount > 0;
+  const isEmpty = state.history.loaded && !hasError && !hasBatches && !hasLegacyOnly;
 
   dom.exportHistoryStatus.textContent = getHistoryStatusMessage({
     isLoading,
     hasError,
     isEmpty,
-    count: state.history.entries.length,
+    batchCount: state.history.batches.length,
+    questionCount: state.history.questionCount,
+    legacyQuestionKeyCount: state.history.legacyQuestionKeyCount,
   });
 
   if (hasError) {
     renderHistoryFeedback(state.history.error, 'history-feedback history-feedback-error');
+    renderHistoryEntries([]);
     dom.exportHistoryList.classList.add('hidden');
     return;
   }
 
-  if (isLoading && !state.history.entries.length) {
+  if (isLoading && !hasBatches) {
     renderHistoryFeedback('Loading local export history…', 'history-feedback');
+    renderHistoryEntries([]);
+    dom.exportHistoryList.classList.add('hidden');
+    return;
+  }
+
+  if (hasLegacyOnly) {
+    renderHistoryFeedback(
+      `${state.history.legacyQuestionKeyCount.toLocaleString()} older question-level entries are active for duplicate filtering. New exports will appear here as saved batches.`,
+      'history-feedback history-feedback-empty'
+    );
+    renderHistoryEntries([]);
     dom.exportHistoryList.classList.add('hidden');
     return;
   }
 
   if (isEmpty) {
     renderHistoryFeedback(
-      'No local export history has been saved yet. Run an export first to start building this cache.',
+      'No batch history has been saved yet. Run an export first to start building this cache.',
       'history-feedback history-feedback-empty'
     );
+    renderHistoryEntries([]);
     dom.exportHistoryList.classList.add('hidden');
     return;
   }
 
   renderHistoryFeedback('', 'history-feedback hidden');
   dom.exportHistoryList.classList.remove('hidden');
-  renderHistoryEntries(state.history.entries);
+  renderHistoryEntries(state.history.batches);
 }
 
 function renderPreview() {
@@ -1058,9 +1160,13 @@ function renderHistoryEntries(entries) {
 }
 
 function createHistoryEntryItem(entry) {
-  const parsed = parseHistoryEntry(entry);
   const item = document.createElement('li');
   item.className = 'history-entry';
+  const details = document.createElement('details');
+  details.className = 'history-entry-disclosure';
+
+  const summary = document.createElement('summary');
+  summary.className = 'history-entry-summary';
 
   const header = document.createElement('div');
   header.className = 'history-entry-header';
@@ -1068,33 +1174,71 @@ function createHistoryEntryItem(entry) {
   const headingBlock = document.createElement('div');
   const title = document.createElement('p');
   title.className = 'history-entry-title';
-  title.textContent = parsed.questionId || entry;
+  title.textContent = formatHistoryBatchTitle(entry);
 
   const subtitle = document.createElement('p');
   subtitle.className = 'history-entry-subtitle';
-  subtitle.textContent = parsed.assessment && parsed.section ? `${parsed.assessment} · ${parsed.section}` : 'Cached question key';
+  const questionCount = entry.questionCount || entry.questions?.length || 0;
+  subtitle.textContent = `${questionCount} question${
+    questionCount === 1 ? '' : 's'
+  } · ${formatMode(entry.mode, entry.includeAnswerKey)} · ${formatHistoryEntryTimestamp(entry.exportedAt)}`;
 
   headingBlock.append(title, subtitle);
   header.append(headingBlock);
 
   const meta = document.createElement('div');
   meta.className = 'history-entry-meta';
-  if (parsed.assessment) {
-    meta.append(createSummaryChip(parsed.assessment, false));
+  meta.append(createSummaryChip(entry.section || 'Unknown section', false));
+  (entry.includedDomains || []).slice(0, 3).forEach((domain) => {
+    meta.append(createSummaryChip(domain, false));
+  });
+  if ((entry.includedDomains || []).length > 3) {
+    meta.append(createSummaryChip(`+${entry.includedDomains.length - 3} more`, true));
   }
-  if (parsed.section) {
-    meta.append(createSummaryChip(parsed.section, false));
-  }
+  header.append(meta);
+  summary.append(header);
 
-  if (meta.childNodes.length) {
-    header.append(meta);
-  }
+  const body = document.createElement('div');
+  body.className = 'history-entry-body';
 
-  const key = document.createElement('code');
-  key.className = 'history-entry-key';
-  key.textContent = entry;
+  const filename = document.createElement('p');
+  filename.className = 'history-entry-file';
+  filename.textContent = entry.filename || 'Saved batch';
+  body.append(filename);
 
-  item.append(header, key);
+  const questionList = document.createElement('ul');
+  questionList.className = 'history-question-list';
+
+  (entry.questions || []).forEach((question) => {
+    const questionItem = document.createElement('li');
+    questionItem.className = 'history-question-item';
+
+    const questionTitle = document.createElement('p');
+    questionTitle.className = 'history-question-title';
+    questionTitle.textContent = question.questionId;
+
+    const questionMeta = document.createElement('div');
+    questionMeta.className = 'history-question-meta';
+    if (question.domain) {
+      questionMeta.append(createSummaryChip(question.domain, false));
+    }
+    if (question.skill) {
+      questionMeta.append(createSummaryChip(question.skill, false));
+    }
+    if (question.difficultyLabel) {
+      questionMeta.append(createSummaryChip(question.difficultyLabel, false));
+    }
+
+    questionItem.append(questionTitle);
+    if (questionMeta.childNodes.length) {
+      questionItem.append(questionMeta);
+    }
+    questionList.append(questionItem);
+  });
+
+  body.append(questionList);
+  details.append(summary, body);
+  item.append(details);
   return item;
 }
 
@@ -1122,23 +1266,22 @@ function createSummaryChip(label, muted) {
   return chip;
 }
 
-function parseHistoryEntry(entry) {
-  const parts = String(entry || '').split('::');
+function formatHistoryBatchTitle(entry) {
+  const base = `${entry.assessment || 'SAT'} ${entry.section || 'Section'}`;
+  return entry.batchNumber ? `${base} - Batch ${entry.batchNumber}` : base;
+}
 
-  if (parts.length < 3) {
-    return {
-      assessment: '',
-      section: '',
-      questionId: String(entry || ''),
-    };
+function formatHistoryEntryTimestamp(value) {
+  if (!value) {
+    return 'Saved recently';
   }
 
-  const [assessment, section, ...questionIdParts] = parts;
-  return {
-    assessment,
-    section,
-    questionId: questionIdParts.join('::'),
-  };
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return 'Saved recently';
+  }
+
+  return date.toLocaleString();
 }
 
 function getProgressValue(job) {
@@ -1201,8 +1344,17 @@ function formatMode(value, includeAnswerKey = false) {
     return '--';
   }
 
-  const label = `${value.charAt(0).toUpperCase()}${value.slice(1)}`;
-  return includeAnswerKey ? `${label} + Answer key` : label;
+  const label = MODE_LABELS[value] || `${value.charAt(0).toUpperCase()}${value.slice(1)}`;
+
+  if (!includeAnswerKey || value === 'teacher') {
+    return label;
+  }
+
+  return `${label} + Answer key`;
+}
+
+export function __testFormatMode(value, includeAnswerKey = false) {
+  return formatMode(value, includeAnswerKey);
 }
 
 function formatState(value) {
@@ -1246,7 +1398,7 @@ function formatHistoryUpdatedAt(value) {
   return `Updated ${date.toLocaleString()}`;
 }
 
-function getHistoryStatusMessage({ isLoading, hasError, isEmpty, count }) {
+function getHistoryStatusMessage({ isLoading, hasError, isEmpty, batchCount, questionCount, legacyQuestionKeyCount }) {
   if (hasError) {
     return 'The local export history could not be read.';
   }
@@ -1259,7 +1411,15 @@ function getHistoryStatusMessage({ isLoading, hasError, isEmpty, count }) {
     return 'The cache is empty right now.';
   }
 
-  return `${count.toLocaleString()} cached question key${count === 1 ? '' : 's'} available for review.`;
+  if (legacyQuestionKeyCount && !batchCount) {
+    return `${legacyQuestionKeyCount.toLocaleString()} legacy question key${
+      legacyQuestionKeyCount === 1 ? '' : 's'
+    } are active for duplicate filtering.`;
+  }
+
+  return `${batchCount.toLocaleString()} batch${batchCount === 1 ? '' : 'es'} covering ${questionCount.toLocaleString()} question${
+    questionCount === 1 ? '' : 's'
+  } available for review.`;
 }
 
 function setError(message) {

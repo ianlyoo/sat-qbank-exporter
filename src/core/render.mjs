@@ -9,14 +9,6 @@ function escapeHtml(value) {
     .replace(/'/g, '&#39;');
 }
 
-function formatModeLabel(mode) {
-  if (!mode) {
-    return 'Unknown';
-  }
-
-  return `${String(mode).charAt(0).toUpperCase()}${String(mode).slice(1)}`;
-}
-
 function renderAnswerOptions(answerOptions = []) {
   if (!answerOptions.length) {
     return '';
@@ -106,31 +98,59 @@ function renderAnswerAppendixEntry(item) {
   `;
 }
 
+function getIncludedDomains(batch) {
+  return [...new Set(batch.map((item) => item.domain).filter(Boolean))];
+}
+
+function formatModeLabel(mode) {
+  switch (mode) {
+    case EXPORT_MODES.teacher:
+      return 'Default + Key';
+    case EXPORT_MODES.clean:
+      return 'Clean';
+    case EXPORT_MODES.student:
+    default:
+      return 'Default';
+  }
+}
+
+function getCoverSubtitle(mode, includeAnswerKey) {
+  if (mode === EXPORT_MODES.teacher) {
+    return 'Questions with answers and rationale.';
+  }
+
+  if (mode === EXPORT_MODES.clean) {
+    return 'Minimal print layout.';
+  }
+
+  if (includeAnswerKey) {
+    return 'Questions only, plus an answer appendix.';
+  }
+
+  return 'Questions only.';
+}
+
 function renderCoverPage(batch, headerText, mode, includeAnswerKey) {
+  const domains = getIncludedDomains(batch);
+
   return `
     <section class="print-page cover-page">
       <div class="cover-shell">
         <p class="cover-kicker">Practice Packet</p>
         <h1>${escapeHtml(headerText)}</h1>
-        <p class="cover-subtitle">
-          ${escapeHtml(
-            includeAnswerKey
-              ? 'Question pages followed by an answer key and rationale appendix.'
-              : 'Question pages prepared for a clean local print export.'
-          )}
-        </p>
+        <p class="cover-subtitle">${escapeHtml(getCoverSubtitle(mode, includeAnswerKey))}</p>
         <dl class="cover-meta">
-          <div>
-            <dt>Mode</dt>
-            <dd>${escapeHtml(formatModeLabel(mode))}</dd>
-          </div>
           <div>
             <dt>Questions</dt>
             <dd>${escapeHtml(String(batch.length))}</dd>
           </div>
           <div>
-            <dt>Layout</dt>
-            <dd>3-up with automatic 2-up fallback</dd>
+            <dt>Mode</dt>
+            <dd>${escapeHtml(formatModeLabel(mode))}</dd>
+          </div>
+          <div class="cover-meta-domains">
+            <dt>Included Domains</dt>
+            <dd>${escapeHtml(domains.join(', ') || 'Not specified')}</dd>
           </div>
         </dl>
       </div>
@@ -302,7 +322,7 @@ export function renderDocumentHtml({ batch, mode, includeAnswerKey = false, head
 
           .cover-meta {
             display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-columns: minmax(0, 28mm) minmax(0, 34mm) minmax(0, 1fr);
             gap: 6mm;
             margin: 12mm 0 0;
             padding-top: 5mm;
@@ -326,6 +346,11 @@ export function renderDocumentHtml({ batch, mode, includeAnswerKey = false, head
             margin: 0;
             color: #1f1b16;
             font-size: 12px;
+            line-height: 1.5;
+          }
+
+          .cover-meta-domains dd {
+            max-width: 100%;
           }
 
           .page-header {
