@@ -702,6 +702,10 @@ button {
   padding-top: var(--space-3);
 }
 
+.panel-form-primary .settings-panel-flags .settings-panel-title {
+  margin: 0 0 var(--space-4);
+}
+
 .panel-form-primary .settings-panel-flags .toggle-grid {
   gap: var(--space-5);
 }
@@ -890,6 +894,7 @@ input[type="text"]:focus {
 
 .mode-grid {
   grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: var(--space-5);
 }
 
 .mode-option,
