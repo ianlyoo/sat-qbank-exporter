@@ -403,16 +403,16 @@ button {
 }
 
 .panel-form-primary .workbench-card-output {
-  padding-top: var(--space-1);
-  padding-bottom: var(--space-5);
+  padding-top: var(--space-2);
+  padding-bottom: var(--space-7);
 }
 
 .panel-form-primary .workbench-card-output .workbench-card-header {
-  margin-bottom: var(--space-5);
+  margin-bottom: var(--space-6);
 }
 
 .panel-form-primary .workbench-card-output .settings-grid {
-  gap: var(--space-6);
+  gap: var(--space-8);
 }
 
 .sidebar {
@@ -699,11 +699,11 @@ button {
 
 .panel-form-primary .settings-panel-flags {
   align-content: start;
-  padding-top: var(--space-1);
+  padding-top: var(--space-3);
 }
 
 .panel-form-primary .settings-panel-flags .toggle-grid {
-  gap: var(--space-4);
+  gap: var(--space-5);
 }
 
 .settings-panel-mode {
@@ -878,6 +878,7 @@ input[type="text"]:focus {
   margin: 0;
   padding: 0;
   border: 0;
+  gap: var(--space-4);
 }
 
 .mode-grid,
@@ -921,7 +922,7 @@ input[type="text"]:focus {
 
 .mode-copy {
   min-height: 100%;
-  padding: var(--space-4);
+  padding: var(--space-5) var(--space-4);
   border-radius: calc(var(--radius-md) - 2px);
   border: 1px solid transparent;
 }
@@ -955,7 +956,7 @@ input[type="text"]:focus {
   display: flex;
   align-items: start;
   gap: var(--space-3);
-  padding: var(--space-3);
+  padding: var(--space-4);
 }
 
 .toggle-card::before {
