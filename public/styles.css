@@ -201,21 +201,6 @@ button {
   z-index: 1;
 }
 
-.site-footer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--space-3);
-  margin-top: var(--space-3);
-  padding: 0 var(--space-1);
-  color: rgba(45, 49, 56, 0.78);
-  font-size: 0.84rem;
-}
-
-.footer-note {
-  margin: 0;
-}
-
 .static-layout {
   display: grid;
   gap: var(--space-4);
@@ -1364,19 +1349,6 @@ input[type="text"]:focus {
   line-height: 1.45;
 }
 
-.preview-legal {
-  margin-top: var(--space-3);
-  padding: var(--space-3);
-  border-top: 1px solid rgba(52, 43, 31, 0.08);
-  color: rgba(45, 49, 56, 0.76);
-  font-size: 0.79rem;
-  line-height: 1.52;
-}
-
-.preview-legal p {
-  margin: 0;
-}
-
 .saved-files-block {
   margin-top: var(--space-3);
   padding-top: var(--space-3);
@@ -1884,11 +1856,6 @@ input[type="text"]:focus {
   .topbar-logo {
     width: 1.85rem;
     height: 1.85rem;
-  }
-
-  .site-footer {
-    flex-direction: column;
-    align-items: flex-start;
   }
 
   .panel-form,
