@@ -107,16 +107,9 @@ button {
 .topbar {
   display: flex;
   align-items: center;
-  min-height: 4.5rem;
-  margin-bottom: var(--space-3);
-  padding: var(--space-3) var(--space-5);
-  border: 1px solid rgba(52, 43, 31, 0.1);
-  border-radius: calc(var(--radius-lg) - 4px);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.34), transparent 34%),
-    rgba(255, 250, 244, 0.76);
-  box-shadow: var(--shadow-card);
-  backdrop-filter: blur(12px);
+  min-height: 3.25rem;
+  margin-bottom: var(--space-2);
+  padding: var(--space-1) 0 var(--space-2);
 }
 
 .topbar-brand {
@@ -127,8 +120,8 @@ button {
 }
 
 .topbar-logo {
-  width: 2.75rem;
-  height: 2.75rem;
+  width: 1.9rem;
+  height: 1.9rem;
   object-fit: contain;
   flex: none;
   filter: drop-shadow(0 10px 18px rgba(197, 154, 66, 0.28));
@@ -1619,14 +1612,14 @@ input[type="text"]:focus {
 
 @media (min-width: 1081px) {
   .topbar {
-    min-height: 4rem;
-    margin-bottom: var(--space-2);
-    padding: var(--space-2) var(--space-4);
+    min-height: 3rem;
+    margin-bottom: var(--space-1);
+    padding: 0 0 var(--space-1);
   }
 
   .topbar-logo {
-    width: 2.35rem;
-    height: 2.35rem;
+    width: 1.75rem;
+    height: 1.75rem;
   }
 
   .panel-form-primary {
@@ -1764,11 +1757,16 @@ input[type="text"]:focus {
 
   .topbar {
     min-height: auto;
-    padding: var(--space-3) var(--space-4);
+    padding: 0 0 var(--space-2);
   }
 
   .topbar-title {
     font-size: 1.1rem;
+  }
+
+  .topbar-logo {
+    width: 1.7rem;
+    height: 1.7rem;
   }
 
   .panel-form,
