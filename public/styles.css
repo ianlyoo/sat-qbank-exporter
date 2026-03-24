@@ -104,6 +104,45 @@ button {
   padding: var(--space-4) 0;
 }
 
+.topbar {
+  display: flex;
+  align-items: center;
+  min-height: 4.5rem;
+  margin-bottom: var(--space-3);
+  padding: var(--space-3) var(--space-5);
+  border: 1px solid rgba(52, 43, 31, 0.1);
+  border-radius: calc(var(--radius-lg) - 4px);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.34), transparent 34%),
+    rgba(255, 250, 244, 0.76);
+  box-shadow: var(--shadow-card);
+  backdrop-filter: blur(12px);
+}
+
+.topbar-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-3);
+  min-width: 0;
+}
+
+.topbar-logo {
+  width: 2.75rem;
+  height: 2.75rem;
+  object-fit: contain;
+  flex: none;
+  filter: drop-shadow(0 10px 18px rgba(197, 154, 66, 0.28));
+}
+
+.topbar-title {
+  min-width: 0;
+  font-family: var(--font-display);
+  font-size: clamp(1.2rem, 1.5vw, 1.6rem);
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: var(--color-ink);
+}
+
 .panel {
   position: relative;
   overflow: hidden;
@@ -403,16 +442,16 @@ button {
 }
 
 .panel-form-primary .workbench-card-output {
-  padding-top: var(--space-2);
-  padding-bottom: var(--space-7);
+  padding-top: var(--space-1);
+  padding-bottom: var(--space-4);
 }
 
 .panel-form-primary .workbench-card-output .workbench-card-header {
-  margin-bottom: var(--space-6);
+  margin-bottom: var(--space-4);
 }
 
 .panel-form-primary .workbench-card-output .settings-grid {
-  gap: var(--space-5);
+  gap: var(--space-3);
 }
 
 .sidebar {
@@ -653,7 +692,7 @@ button {
   align-content: start;
   overflow: auto;
   padding-right: var(--space-2);
-  gap: var(--space-4);
+  gap: var(--space-3);
 }
 
 .filter-panel-domains {
@@ -697,11 +736,11 @@ button {
 }
 
 .panel-form-primary .settings-panel-flags .settings-panel-title {
-  margin: 0 0 var(--space-4);
+  margin: 0 0 var(--space-2);
 }
 
 .panel-form-primary .settings-panel-flags .toggle-grid {
-  gap: var(--space-5);
+  gap: var(--space-4);
 }
 
 .settings-panel-mode {
@@ -719,7 +758,7 @@ button {
   min-height: 0;
   gap: var(--space-3);
   padding: var(--space-4);
-  min-height: 11.5rem;
+  min-height: 10.75rem;
 }
 
 .fieldset-header {
@@ -1272,12 +1311,12 @@ input[type="text"]:focus {
 .preview-overview {
   display: grid;
   grid-template-columns: 1fr;
-  grid-template-rows: auto minmax(0, 1fr);
+  grid-template-rows: auto auto;
   align-items: start;
-  align-content: stretch;
+  align-content: start;
   min-height: 0;
   overflow: auto;
-  padding-right: var(--space-1);
+  padding-right: 0;
 }
 
 .status-overview {
@@ -1299,8 +1338,8 @@ input[type="text"]:focus {
 }
 
 .panel-preview {
-  grid-template-rows: auto minmax(0, 1fr);
-  height: 100%;
+  grid-template-rows: auto auto;
+  height: auto;
 }
 
 .panel-status {
@@ -1579,6 +1618,17 @@ input[type="text"]:focus {
 }
 
 @media (min-width: 1081px) {
+  .topbar {
+    min-height: 4rem;
+    margin-bottom: var(--space-2);
+    padding: var(--space-2) var(--space-4);
+  }
+
+  .topbar-logo {
+    width: 2.35rem;
+    height: 2.35rem;
+  }
+
   .panel-form-primary {
     overflow: hidden;
   }
@@ -1591,7 +1641,7 @@ input[type="text"]:focus {
   }
 
   .panel-form-primary .panel-form-body {
-    gap: var(--space-4);
+    gap: var(--space-3);
   }
 
   .panel-form-primary .workbench-card-primary-section + .workbench-card-primary-section {
@@ -1603,14 +1653,14 @@ input[type="text"]:focus {
     top: auto;
     height: 100%;
     max-height: none;
-    gap: var(--space-3);
+    gap: var(--space-2);
     align-content: stretch;
-    grid-template-rows: minmax(240px, auto) minmax(0, 1fr);
+    grid-template-rows: auto minmax(0, 1fr);
   }
 
   .panel-preview {
     min-height: 0;
-    height: 100%;
+    height: auto;
   }
 
   .panel-status {
@@ -1656,15 +1706,15 @@ input[type="text"]:focus {
   }
 
   .filter-panel-domains .chip-wrap {
-    max-height: min(8.5rem, 16vh);
+    max-height: min(8rem, 15vh);
   }
 
   .filter-panel-skills .chip-wrap {
-    max-height: min(8.75rem, 17vh);
+    max-height: min(8.25rem, 16vh);
   }
 
   .filter-panel-difficulty .chip-wrap {
-    max-height: min(4.5rem, 10vh);
+    max-height: min(4.1rem, 9vh);
   }
 }
 
@@ -1710,6 +1760,15 @@ input[type="text"]:focus {
   .page-shell {
     width: min(100% - var(--space-5), 100%);
     padding: var(--space-4) 0 var(--space-8);
+  }
+
+  .topbar {
+    min-height: auto;
+    padding: var(--space-3) var(--space-4);
+  }
+
+  .topbar-title {
+    font-size: 1.1rem;
   }
 
   .panel-form,
