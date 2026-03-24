@@ -258,7 +258,7 @@ button {
 
 @media (min-width: 1081px) {
   html {
-    font-size: 13.4px;
+    font-size: 15px;
   }
 
   body {
@@ -267,7 +267,7 @@ button {
   }
 
   .page-shell {
-    width: min(1940px, calc(100% - var(--space-4)));
+    width: min(2240px, calc(100% - var(--space-6)));
     display: flex;
     flex-direction: column;
     min-height: 100dvh;
@@ -283,13 +283,13 @@ button {
 
   .workspace {
     flex: 1 1 auto;
-    grid-template-columns: minmax(0, 2.02fr) minmax(320px, 0.74fr);
+    grid-template-columns: minmax(0, 2.06fr) minmax(340px, 0.72fr);
     gap: var(--space-3);
     align-items: stretch;
   }
 
   .config-form {
-     grid-template-columns: minmax(340px, 1.06fr) minmax(300px, 0.94fr);
+     grid-template-columns: minmax(360px, 1.02fr) minmax(320px, 0.98fr);
      gap: var(--space-3);
    }
 
@@ -1706,6 +1706,22 @@ input[type="text"]:focus {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: var(--space-2) var(--space-3);
     padding-top: var(--space-3);
+  }
+}
+
+@media (min-width: 1800px) {
+  .page-shell {
+    width: min(2520px, calc(100% - var(--space-8)));
+  }
+
+  .workspace {
+    grid-template-columns: minmax(0, 2.12fr) minmax(360px, 0.68fr);
+    gap: var(--space-4);
+  }
+
+  .config-form {
+    grid-template-columns: minmax(380px, 1.04fr) minmax(340px, 0.96fr);
+    gap: var(--space-4);
   }
 }
 
