@@ -20,8 +20,8 @@
   --color-danger: #a33d32;
   --color-danger-soft: #f9dfdb;
   --color-overlay: rgba(32, 36, 42, 0.44);
-  --shadow-soft: 0 24px 60px rgba(44, 33, 20, 0.1);
-  --shadow-card: 0 14px 34px rgba(38, 29, 18, 0.08);
+  --shadow-soft: 0 12px 28px rgba(44, 33, 20, 0.055);
+  --shadow-card: 0 6px 16px rgba(38, 29, 18, 0.045);
   --shadow-modal: 0 34px 92px rgba(38, 29, 18, 0.22);
   --radius-sm: 12px;
   --radius-md: 18px;
@@ -150,7 +150,6 @@ button {
     linear-gradient(180deg, rgba(255, 255, 255, 0.28), transparent 26%),
     var(--color-panel);
   box-shadow: var(--shadow-soft);
-  backdrop-filter: blur(14px);
   animation: rise-in 520ms ease both;
 }
 
@@ -1058,7 +1057,6 @@ input[type="text"]:focus {
     linear-gradient(180deg, rgba(255, 255, 255, 0.28), transparent 26%),
     linear-gradient(180deg, rgba(255, 250, 244, 0.82), rgba(245, 221, 210, 0.42));
   box-shadow: var(--shadow-soft);
-  backdrop-filter: blur(14px);
   position: relative;
   overflow: hidden;
 }
