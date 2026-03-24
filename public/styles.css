@@ -117,13 +117,16 @@ button {
   align-items: center;
   gap: var(--space-3);
   min-width: 0;
+  overflow: visible;
 }
 
 .topbar-logo {
-  width: 2.45rem;
-  height: 2.45rem;
+  width: 2.2rem;
+  height: 2.2rem;
   object-fit: contain;
   flex: none;
+  transform: scale(1.8);
+  transform-origin: center;
   filter: drop-shadow(0 10px 18px rgba(197, 154, 66, 0.28));
 }
 
@@ -1622,8 +1625,8 @@ input[type="text"]:focus {
   }
 
   .topbar-logo {
-    width: 2.2rem;
-    height: 2.2rem;
+    width: 2rem;
+    height: 2rem;
   }
 
   .panel-form-primary {
@@ -1769,8 +1772,8 @@ input[type="text"]:focus {
   }
 
   .topbar-logo {
-    width: 2rem;
-    height: 2rem;
+    width: 1.85rem;
+    height: 1.85rem;
   }
 
   .panel-form,
