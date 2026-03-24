@@ -412,7 +412,7 @@ button {
 }
 
 .panel-form-primary .workbench-card-output .settings-grid {
-  gap: var(--space-8);
+  gap: var(--space-5);
 }
 
 .sidebar {
@@ -699,7 +699,7 @@ button {
 
 .panel-form-primary .settings-panel-flags {
   align-content: start;
-  padding-top: var(--space-3);
+  padding-top: 0;
 }
 
 .panel-form-primary .settings-panel-flags .settings-panel-title {
