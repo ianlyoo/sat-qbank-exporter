@@ -607,15 +607,6 @@ button {
   border-top: 1px solid rgba(52, 43, 31, 0.08);
 }
 
-.workbench-card-filters {
-  display: grid;
-  min-height: 0;
-  height: auto;
-  align-content: start;
-  overflow: auto;
-  padding-right: var(--space-2);
-}
-
 .workbench-card-header {
   display: flex;
   align-items: end;
@@ -660,6 +651,9 @@ button {
     "difficulty";
   min-height: 0;
   align-content: start;
+  overflow: auto;
+  padding-right: var(--space-2);
+  gap: var(--space-4);
 }
 
 .filter-panel-domains {
@@ -723,7 +717,9 @@ button {
   grid-template-rows: auto auto;
   align-content: start;
   min-height: 0;
-  gap: var(--space-2);
+  gap: var(--space-3);
+  padding: var(--space-4);
+  min-height: 11.5rem;
 }
 
 .fieldset-header {
@@ -976,8 +972,22 @@ input[type="text"]:focus {
 }
 
 .toggle-card:has(input:checked) {
-  border-color: rgba(37, 73, 66, 0.2);
-  background: linear-gradient(180deg, rgba(220, 233, 225, 0.92), rgba(255, 250, 244, 0.96));
+  border-color: transparent;
+  background:
+    linear-gradient(180deg, rgba(227, 236, 230, 0.96), rgba(255, 250, 244, 0.98)) padding-box,
+    linear-gradient(135deg, rgba(37, 73, 66, 0.26), rgba(181, 90, 60, 0.24)) border-box;
+  box-shadow:
+    0 10px 20px rgba(37, 73, 66, 0.08),
+    inset 0 1px 0 rgba(255, 255, 255, 0.88);
+  transform: translateY(-1px);
+}
+
+.toggle-card:has(input:checked) strong {
+  color: var(--color-ink);
+}
+
+.toggle-card:has(input:checked) small {
+  color: var(--color-muted);
 }
 
 .toggle-card:has(input:checked)::before {
