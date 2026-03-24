@@ -598,10 +598,6 @@ button {
   border-top: 1px solid rgba(52, 43, 31, 0.08);
 }
 
-.panel-form-primary .workbench-card-output + .workbench-card-primary-section {
-  padding-top: var(--space-6);
-}
-
 .workbench-card-filters {
   display: grid;
   min-height: 0;
@@ -672,6 +668,7 @@ button {
 .settings-grid {
   grid-template-columns: 1fr;
   align-items: start;
+  gap: var(--space-5);
 }
 
 .settings-panel {
