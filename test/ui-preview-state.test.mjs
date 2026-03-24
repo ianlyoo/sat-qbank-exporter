@@ -81,19 +81,21 @@ test('preview mode labels use the updated UI copy', () => {
   assert.equal(__testFormatMode('student'), 'Default');
   assert.equal(__testFormatMode('teacher'), 'Default + Key');
   assert.equal(__testFormatMode('clean'), 'Clean');
+  assert.equal(__testFormatMode('student', true), 'Default + Answer key');
+  assert.equal(__testFormatMode('clean', true), 'Clean + Answer key');
 });
 
-test('mode options use the updated labels and hide the appendix toggle', async () => {
+test('mode options use the updated labels and expose the answer key toggle', async () => {
   const indexPath = fileURLToPath(new URL('../public/index.html', import.meta.url));
   const html = await fs.readFile(indexPath, 'utf8');
 
   assert.match(html, /<strong>Default<\/strong>/);
-  assert.match(html, /<strong>Default \+ Key<\/strong>/);
+  assert.match(html, /<strong>Clean<\/strong>/);
+  assert.match(html, /<strong>Answer key included<\/strong>/);
   assert.match(html, /Questions only\./);
-  assert.match(html, /Questions first, then an answer key and rationale appendix\./);
   assert.match(html, /Minimal print layout\./);
+  assert.match(html, /Add an answer key and rationale appendix after the questions\./);
   assert.doesNotMatch(html, /Output directory/);
   assert.doesNotMatch(html, /id="output-dir"/);
-  assert.doesNotMatch(html, /Append answer key \+ rationale/);
-  assert.doesNotMatch(html, /id="include-answer-key"/);
+  assert.match(html, /id="include-answer-key"/);
 });

@@ -91,6 +91,7 @@ function cacheDom() {
   dom.difficultyCount = document.getElementById('difficulty-count');
   dom.questionCount = document.getElementById('question-count');
   dom.chunkSize = document.getElementById('chunk-size');
+  dom.includeAnswerKey = document.getElementById('include-answer-key');
   dom.shuffle = document.getElementById('shuffle');
   dom.excludeExported = document.getElementById('exclude-exported');
   dom.previewButton = document.getElementById('preview-button');
@@ -169,6 +170,10 @@ function bindEvents() {
         updateForm({ mode: event.target.value });
       }
     });
+  });
+
+  dom.includeAnswerKey.addEventListener('change', (event) => {
+    updateForm({ includeAnswerKey: event.target.checked });
   });
 
   dom.previewButton.addEventListener('click', async () => {
@@ -346,7 +351,7 @@ function createFormFromDefaults(defaults, lookup) {
       questionCount: defaults?.questionCount ?? 20,
       chunkSize: defaults?.chunkSize ?? 20,
       mode: defaults?.mode || 'student',
-      includeAnswerKey: false,
+      includeAnswerKey: Boolean(defaults?.includeAnswerKey),
       outputDir: defaults?.outputDir || './output',
       shuffle: Boolean(defaults?.shuffle ?? true),
       excludeExported: Boolean(defaults?.excludeExported ?? false),
@@ -851,7 +856,7 @@ function buildPayload() {
     questionCount: Number(state.form.questionCount),
     chunkSize: Number(state.form.chunkSize),
     mode: state.form.mode,
-    includeAnswerKey: state.form.mode === 'teacher',
+    includeAnswerKey: state.form.includeAnswerKey,
     outputDir: state.form.outputDir,
     shuffle: state.form.shuffle,
     excludeActive: false,
@@ -1041,6 +1046,7 @@ function toggleValue(values, value) {
 function renderInputs() {
   dom.questionCount.value = state.form.questionCount;
   dom.chunkSize.value = state.form.chunkSize;
+  dom.includeAnswerKey.checked = state.form.includeAnswerKey;
   dom.shuffle.checked = state.form.shuffle;
   dom.excludeExported.checked = state.form.excludeExported;
 
@@ -1051,6 +1057,7 @@ function renderInputs() {
   const disabled = state.pending.boot;
   dom.questionCount.disabled = disabled;
   dom.chunkSize.disabled = disabled;
+  dom.includeAnswerKey.disabled = disabled;
   dom.shuffle.disabled = disabled;
   dom.excludeExported.disabled = disabled;
   document.querySelectorAll('input[name="mode"]').forEach((input) => {

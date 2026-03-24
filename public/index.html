@@ -84,7 +84,7 @@
                 <div class="settings-grid">
                   <fieldset class="field mode-fieldset settings-panel settings-panel-mode">
                     <legend id="mode-label" class="field-label">Mode</legend>
-                    <div class="mode-grid" role="radiogroup" aria-labelledby="mode-label">
+                    <div class="mode-grid" aria-labelledby="mode-label">
                       <label class="mode-option">
                         <input type="radio" name="mode" value="student">
                         <span class="mode-copy">
@@ -93,17 +93,17 @@
                         </span>
                       </label>
                       <label class="mode-option">
-                        <input type="radio" name="mode" value="teacher">
-                        <span class="mode-copy">
-                          <strong>Default + Key</strong>
-                          <small>Questions first, then an answer key and rationale appendix.</small>
-                        </span>
-                      </label>
-                      <label class="mode-option">
                         <input type="radio" name="mode" value="clean">
                         <span class="mode-copy">
                           <strong>Clean</strong>
                           <small>Minimal print layout.</small>
+                        </span>
+                      </label>
+                      <label class="mode-option mode-option-toggle">
+                        <input id="include-answer-key" name="includeAnswerKey" type="checkbox">
+                        <span class="mode-copy">
+                          <strong>Answer key included</strong>
+                          <small>Add an answer key and rationale appendix after the questions.</small>
                         </span>
                       </label>
                     </div>
