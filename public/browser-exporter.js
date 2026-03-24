@@ -660,46 +660,6 @@ function createHtmlFallbackFilename(filename) {
   return filename.replace(/\.pdf$/i, '.html');
 }
 
-function injectAutoPrintScript(contents) {
-  const autoPrintScript = `
-    <script>
-      (() => {
-        const doneFlag = '__SAT_PDF_LAYOUT_DONE__';
-        const errorFlag = '__SAT_PDF_LAYOUT_ERROR__';
-        let printed = false;
-
-        function triggerPrint() {
-          if (printed || window[errorFlag] || !window[doneFlag]) {
-            return;
-          }
-
-          printed = true;
-          window.setTimeout(() => {
-            window.focus();
-            window.print();
-          }, 180);
-        }
-
-        window.addEventListener('load', () => {
-          const poll = window.setInterval(() => {
-            if (window[errorFlag]) {
-              window.clearInterval(poll);
-              return;
-            }
-
-            if (window[doneFlag]) {
-              window.clearInterval(poll);
-              triggerPrint();
-            }
-          }, 120);
-        }, { once: true });
-      })();
-    </script>
-  `;
-
-  return contents.replace('</body>', `${autoPrintScript}</body>`);
-}
-
 function downloadTextFile(filename, contents) {
   const blob = new Blob([contents], { type: 'text/html;charset=utf-8' });
   const url = URL.createObjectURL(blob);
@@ -712,24 +672,106 @@ function downloadTextFile(filename, contents) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function openPrintablePreview(filename, contents, previewWindow) {
-  const printableHtml = injectAutoPrintScript(contents);
-  const blob = new Blob([printableHtml], { type: 'text/html;charset=utf-8' });
-  const url = URL.createObjectURL(blob);
-
-  if (previewWindow && !previewWindow.closed) {
-    previewWindow.location.replace(url);
-    previewWindow.focus?.();
-    window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
-    return {
-      delivery: 'preview',
-      label: filename,
+async function waitForFrameLoad(frame, url) {
+  await new Promise((resolve, reject) => {
+    const cleanup = () => {
+      frame.removeEventListener('load', handleLoad);
+      frame.removeEventListener('error', handleError);
     };
+
+    const handleLoad = () => {
+      cleanup();
+      resolve();
+    };
+
+    const handleError = () => {
+      cleanup();
+      reject(new Error('Unable to load the printable document into the browser print frame.'));
+    };
+
+    frame.addEventListener('load', handleLoad, { once: true });
+    frame.addEventListener('error', handleError, { once: true });
+    frame.src = url;
+  });
+}
+
+async function waitForFrameLayout(frame, timeoutMs = 20_000) {
+  const doneFlag = '__SAT_PDF_LAYOUT_DONE__';
+  const errorFlag = '__SAT_PDF_LAYOUT_ERROR__';
+  const startedAt = Date.now();
+
+  while (Date.now() - startedAt < timeoutMs) {
+    const frameWindow = frame.contentWindow;
+
+    if (!frameWindow) {
+      throw new Error('Browser print frame is unavailable.');
+    }
+
+    if (frameWindow[errorFlag]) {
+      throw new Error(String(frameWindow[errorFlag]));
+    }
+
+    if (frameWindow[doneFlag]) {
+      return;
+    }
+
+    await new Promise((resolve) => window.setTimeout(resolve, 120));
+  }
+
+  throw new Error('Timed out while preparing the printable packet.');
+}
+
+async function printWithFrame(frame) {
+  const frameWindow = frame.contentWindow;
+  if (!frameWindow) {
+    throw new Error('Browser print frame is unavailable.');
+  }
+
+  await new Promise((resolve) => {
+    let settled = false;
+
+    const finish = () => {
+      if (settled) {
+        return;
+      }
+
+      settled = true;
+      frameWindow.removeEventListener('afterprint', finish);
+      resolve();
+    };
+
+    frameWindow.addEventListener('afterprint', finish, { once: true });
+
+    // Some browsers do not reliably emit afterprint for iframe content.
+    window.setTimeout(finish, 1500);
+
+    frameWindow.focus();
+    frameWindow.print();
+  });
+}
+
+async function openPrintablePreview(filename, contents, printFrame) {
+  if (printFrame && printFrame.contentWindow) {
+    const blob = new Blob([contents], { type: 'text/html;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+
+    try {
+      await waitForFrameLoad(printFrame, url);
+      await waitForFrameLayout(printFrame);
+      await printWithFrame(printFrame);
+
+      return {
+        delivery: 'print',
+        label: filename,
+      };
+    } finally {
+      window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+      printFrame.removeAttribute('src');
+    }
   }
 
   const fallbackFilename = createHtmlFallbackFilename(filename);
-  downloadTextFile(fallbackFilename, printableHtml);
-  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  downloadTextFile(fallbackFilename, contents);
   return {
     delivery: 'download',
     label: fallbackFilename,
@@ -861,7 +903,7 @@ export async function previewBrowserExport(input) {
   };
 }
 
-export async function runBrowserExport(input, { onProgress, previewWindows = [] } = {}) {
+export async function runBrowserExport(input, { onProgress, printFrame = null } = {}) {
   const prepared = await prepareExport(input, { onProgress });
   const savedFiles = [];
   let openedPreviewCount = 0;
@@ -931,7 +973,7 @@ export async function runBrowserExport(input, { onProgress, previewWindows = [] 
       buildFilename(batchNumber, printableBatch, prepared.config.mode),
       prepared.config.outputDir
     );
-    const delivery = openPrintablePreview(filename, html, previewWindows[index]);
+    const delivery = await openPrintablePreview(filename, html, printFrame);
     appendBrowserHistory(prepared.config, batch, {
       batchNumber,
       filename,
@@ -947,8 +989,8 @@ export async function runBrowserExport(input, { onProgress, previewWindows = [] 
       state: 'running',
       phase: 'saved',
       message:
-        delivery.delivery === 'preview'
-          ? `Opened print preview for ${filename}. Use Print > Save as PDF.`
+        delivery.delivery === 'print'
+          ? `Opened the print dialog for ${filename}. Use Save as PDF.`
           : `Popup blocked, so ${delivery.label} was downloaded instead.`,
       matchedCount: prepared.totalMatchedCount,
       exportCount: prepared.selectedCount,

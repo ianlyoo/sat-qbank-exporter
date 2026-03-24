@@ -271,66 +271,24 @@ function bindEvents() {
   });
 }
 
-function prepareBrowserPreviewWindows(count) {
-  const windows = [];
-  const total = Number.isFinite(count) ? count : 0;
+function prepareBrowserPrintFrame() {
+  const frame = document.createElement('iframe');
+  frame.setAttribute('aria-hidden', 'true');
+  frame.tabIndex = -1;
+  frame.style.position = 'fixed';
+  frame.style.right = '0';
+  frame.style.bottom = '0';
+  frame.style.width = '0';
+  frame.style.height = '0';
+  frame.style.border = '0';
+  frame.style.opacity = '0';
+  frame.style.pointerEvents = 'none';
+  document.body.append(frame);
+  return frame;
+}
 
-  for (let index = 0; index < total; index += 1) {
-    const previewWindow = window.open('', '_blank');
-
-    if (!previewWindow) {
-      windows.push(null);
-      continue;
-    }
-
-    previewWindow.document.write(`
-      <!doctype html>
-      <html lang="en">
-        <head>
-          <meta charset="utf-8" />
-          <title>Preparing printable packet...</title>
-          <style>
-            body {
-              margin: 0;
-              padding: 32px;
-              font-family: Georgia, "Times New Roman", serif;
-              color: #161616;
-              background: #f6f1e8;
-            }
-
-            main {
-              max-width: 720px;
-              margin: 0 auto;
-              background: #ffffff;
-              border: 1px solid #ddd3c3;
-              padding: 24px 28px;
-              box-shadow: 0 12px 30px rgba(45, 30, 12, 0.08);
-            }
-
-            h1 {
-              margin: 0 0 12px;
-              font-size: 28px;
-            }
-
-            p {
-              margin: 0;
-              line-height: 1.6;
-            }
-          </style>
-        </head>
-        <body>
-          <main>
-            <h1>Preparing printable packet...</h1>
-            <p>This tab will load the batch preview as soon as the questions finish rendering.</p>
-          </main>
-        </body>
-      </html>
-    `);
-    previewWindow.document.close();
-    windows.push(previewWindow);
-  }
-
-  return windows;
+function cleanupBrowserPrintFrame(frame) {
+  frame?.remove();
 }
 
 async function boot() {
@@ -593,40 +551,43 @@ async function startExport() {
         currentBatch: null,
         totalBatches: state.preview?.exportBatches ?? null,
         savedFiles: [],
-        outputDir: 'Browser print previews',
+        outputDir: 'Browser print dialog',
         error: null,
       };
       render();
+      const printFrame = prepareBrowserPrintFrame();
 
-      const previewWindows = prepareBrowserPreviewWindows(state.preview?.exportBatches ?? 0);
+      try {
+        const result = await runBrowserExport(buildPayload(), {
+          printFrame,
+          onProgress(progress) {
+            state.job = {
+              ...state.job,
+              ...progress,
+            };
+            render();
+          },
+        });
 
-      const result = await runBrowserExport(buildPayload(), {
-        previewWindows,
-        onProgress(progress) {
-          state.job = {
-            ...state.job,
-            ...progress,
-          };
-          render();
-        },
-      });
-
-      state.job = {
-        state: 'completed',
-        phase: 'completed',
-        message:
-          result.fallbackDownloadCount > 0
-            ? 'Some print previews were blocked and downloaded as HTML. Open them and use Save as PDF.'
-            : 'Print preview tabs are ready. Use Print > Save as PDF in each tab.',
-        currentBatch: result.totalBatches,
-        totalBatches: result.totalBatches,
-        savedFiles: result.savedFiles,
-        outputDir: result.outputDir,
-        error: null,
-      };
-      state.previewStale = false;
-      render();
-      return;
+        state.job = {
+          state: 'completed',
+          phase: 'completed',
+          message:
+            result.fallbackDownloadCount > 0
+              ? 'The browser could not open the print dialog for some batches, so HTML files were downloaded instead.'
+              : 'The print dialog is ready. Use Save as PDF to keep each packet.',
+          currentBatch: result.totalBatches,
+          totalBatches: result.totalBatches,
+          savedFiles: result.savedFiles,
+          outputDir: result.outputDir,
+          error: null,
+        };
+        state.previewStale = false;
+        render();
+        return;
+      } finally {
+        cleanupBrowserPrintFrame(printFrame);
+      }
     }
 
     const response = await fetchJson('/api/export', {
@@ -1138,10 +1099,10 @@ function renderActions() {
     ? 'Export in progress'
     : state.pending.export
       ? state.runtimeMode === 'browser'
-        ? 'Opening previews...'
+        ? 'Opening print dialog...'
         : 'Starting export...'
       : state.runtimeMode === 'browser'
-        ? 'Open print packets'
+        ? 'Print packets'
         : 'Start export job';
 }
 
@@ -1270,10 +1231,11 @@ function renderJob() {
     dom.jobMessage.textContent =
       state.runtimeMode === 'browser'
         ? 'Preview the current configuration or open print previews when you are ready.'
+        
         : 'Preview the current configuration or start a render when you are ready.';
     dom.jobNote.textContent =
       state.runtimeMode === 'browser'
-        ? 'Browser mode opens printable packet previews. Save each one as PDF from the print dialog.'
+        ? 'Browser mode opens the print dialog directly. Save each packet as PDF there.'
         : 'Exports stay local; progress updates automatically once a job starts.';
     dom.jobId.textContent = '--';
     dom.jobBatch.textContent = '--';
@@ -1495,7 +1457,7 @@ function getProgressValue(job) {
 function getJobNote(job) {
   if (job.state === 'completed') {
     if (state.runtimeMode === 'browser') {
-      return `Prepared ${job.savedFiles?.length || 0} printable packet${job.savedFiles?.length === 1 ? '' : 's'}. Save each preview as PDF from the print dialog.`;
+      return `Prepared ${job.savedFiles?.length || 0} printable packet${job.savedFiles?.length === 1 ? '' : 's'}. Save each one as PDF from the print dialog.`;
     }
 
     return `Saved ${job.savedFiles?.length || 0} file${job.savedFiles?.length === 1 ? '' : 's'} to ${job.outputDir || 'the chosen output folder'}.`;
@@ -1507,12 +1469,12 @@ function getJobNote(job) {
 
   if (job.state === 'queued') {
     return state.runtimeMode === 'browser'
-      ? 'The browser is preparing printable packet previews right away.'
+      ? 'The browser is preparing the print dialog right away.'
       : 'The export request is registered locally and will begin polling for progress right away.';
   }
 
   return state.runtimeMode === 'browser'
-    ? 'Building printable packet previews in the browser so you can save them as PDF without a server worker.'
+    ? 'Building printable packets in the browser and opening the print dialog without a server worker.'
     : `Writing PDFs into ${job.outputDir || state.form.outputDir} while polling status every moment.`;
 }
 
