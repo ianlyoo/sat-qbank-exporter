@@ -590,6 +590,16 @@ function serializeBrowserHistorySnapshot() {
   return JSON.stringify(readBrowserHistorySnapshot(), null, 2);
 }
 
+function mapBrowserHistoryPayload(history) {
+  return {
+    batchCount: history.batches.length,
+    questionCount: history.questionKeys.length,
+    legacyQuestionKeyCount: history.legacyQuestionKeyCount,
+    updatedAt: history.updatedAt,
+    batches: history.batches,
+  };
+}
+
 function loadBrowserHistorySet() {
   return new Set(readBrowserHistorySnapshot().questionKeys);
 }
@@ -1019,11 +1029,11 @@ export async function clearBrowserHistory() {
 }
 
 export async function loadBrowserHistory() {
-  return readBrowserHistorySnapshot();
+  return mapBrowserHistoryPayload(readBrowserHistorySnapshot());
 }
 
 export async function importBrowserHistory(history) {
-  return importBrowserHistorySnapshot(history);
+  return mapBrowserHistoryPayload(importBrowserHistorySnapshot(history));
 }
 
 export function downloadBrowserHistory() {
@@ -1041,4 +1051,8 @@ export function downloadBrowserHistory() {
 
 export function __testResolveBrowserRenderOptions(config) {
   return resolveBrowserRenderOptions(config);
+}
+
+export function __testMapBrowserHistoryPayload(history) {
+  return mapBrowserHistoryPayload(history);
 }
