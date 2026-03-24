@@ -91,7 +91,6 @@ function cacheDom() {
   dom.difficultyCount = document.getElementById('difficulty-count');
   dom.questionCount = document.getElementById('question-count');
   dom.chunkSize = document.getElementById('chunk-size');
-  dom.outputDir = document.getElementById('output-dir');
   dom.shuffle = document.getElementById('shuffle');
   dom.excludeExported = document.getElementById('exclude-exported');
   dom.previewButton = document.getElementById('preview-button');
@@ -117,7 +116,6 @@ function cacheDom() {
   dom.previewAssessment = document.getElementById('preview-assessment');
   dom.previewSection = document.getElementById('preview-section');
   dom.previewMode = document.getElementById('preview-mode');
-  dom.previewOutput = document.getElementById('preview-output');
   dom.previewAvailable = document.getElementById('preview-available');
   dom.previewSkipped = document.getElementById('preview-skipped');
   dom.previewDomains = document.getElementById('preview-domains');
@@ -155,10 +153,6 @@ function bindEvents() {
 
   dom.chunkSize.addEventListener('input', (event) => {
     updateForm({ chunkSize: Number(event.target.value) || '' });
-  });
-
-  dom.outputDir.addEventListener('input', (event) => {
-    updateForm({ outputDir: event.target.value });
   });
 
   dom.shuffle.addEventListener('change', (event) => {
@@ -1047,7 +1041,6 @@ function toggleValue(values, value) {
 function renderInputs() {
   dom.questionCount.value = state.form.questionCount;
   dom.chunkSize.value = state.form.chunkSize;
-  dom.outputDir.value = state.form.outputDir;
   dom.shuffle.checked = state.form.shuffle;
   dom.excludeExported.checked = state.form.excludeExported;
 
@@ -1058,7 +1051,6 @@ function renderInputs() {
   const disabled = state.pending.boot;
   dom.questionCount.disabled = disabled;
   dom.chunkSize.disabled = disabled;
-  dom.outputDir.disabled = disabled;
   dom.shuffle.disabled = disabled;
   dom.excludeExported.disabled = disabled;
   document.querySelectorAll('input[name="mode"]').forEach((input) => {
@@ -1188,7 +1180,6 @@ function renderPreview() {
     dom.previewAssessment.textContent = state.form.assessment || '--';
     dom.previewSection.textContent = state.form.section || '--';
     dom.previewMode.textContent = formatMode(state.form.mode, state.form.includeAnswerKey);
-    dom.previewOutput.textContent = state.form.outputDir || '--';
     dom.previewAvailable.textContent = state.form.excludeExported ? '--' : 'All matched questions';
     dom.previewSkipped.textContent = state.form.excludeExported ? '--' : 'Filter off';
     renderSummaryChips(dom.previewDomains, state.form.domains, 'Choose domains');
@@ -1205,12 +1196,11 @@ function renderPreview() {
   dom.previewExportBatches.textContent = formatCount(preview.exportBatches);
     dom.previewAssessment.textContent = previewConfig.assessment || state.form.assessment || '--';
     dom.previewSection.textContent = previewConfig.section || state.form.section || '--';
-    dom.previewMode.textContent = formatMode(
-      previewConfig.mode || state.form.mode,
-      previewConfig.includeAnswerKey ?? state.form.includeAnswerKey
-    );
-    dom.previewOutput.textContent = preview.outputDir || state.form.outputDir || '--';
-    dom.previewAvailable.textContent = formatCount(preview.availableCount);
+  dom.previewMode.textContent = formatMode(
+    previewConfig.mode || state.form.mode,
+    previewConfig.includeAnswerKey ?? state.form.includeAnswerKey
+  );
+  dom.previewAvailable.textContent = formatCount(preview.availableCount);
     dom.previewSkipped.textContent = previewConfig.excludeExported
       ? formatCount(preview.excludedPreviouslyExportedCount)
       : 'Filter off';
@@ -1230,8 +1220,7 @@ function renderJob() {
     dom.jobProgress.style.width = '0%';
     dom.jobMessage.textContent =
       state.runtimeMode === 'browser'
-        ? 'Preview the current configuration or open print previews when you are ready.'
-        
+        ? 'Preview the current configuration or open the print dialog when you are ready.'
         : 'Preview the current configuration or start a render when you are ready.';
     dom.jobNote.textContent =
       state.runtimeMode === 'browser'

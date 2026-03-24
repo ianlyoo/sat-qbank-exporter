@@ -997,7 +997,7 @@ export async function runBrowserExport(input, { onProgress, printFrame = null } 
       currentBatch: index + 1,
       totalBatches: prepared.exportBatchCount,
       savedFiles,
-      outputDir: 'Browser print previews',
+      outputDir: 'Browser print dialog',
       config: prepared.config,
     });
   }
@@ -1009,7 +1009,7 @@ export async function runBrowserExport(input, { onProgress, printFrame = null } 
     savedFiles,
     openedPreviewCount,
     fallbackDownloadCount,
-    outputDir: 'Browser print previews',
+    outputDir: 'Browser print dialog',
     config: prepared.config,
   };
 }

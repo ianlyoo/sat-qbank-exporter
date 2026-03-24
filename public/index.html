@@ -31,44 +31,6 @@
             <p id="data-status" class="hidden" aria-live="polite"></p>
 
             <div class="panel-form-body">
-              <section class="workbench-card workbench-card-overview workbench-card-primary-section">
-                <div class="workbench-card-header">
-                  <div>
-                    <p class="section-kicker">Scope</p>
-                    <h3>Choose the SAT window</h3>
-                  </div>
-                </div>
-
-                <div class="field-grid field-grid-overview">
-                  <label class="field">
-                    <span class="field-label">Assessment</span>
-                    <select id="assessment" name="assessment"></select>
-                  </label>
-
-                  <label class="field">
-                    <span class="field-label">Section</span>
-                    <select id="section" name="section"></select>
-                  </label>
-
-                  <label class="field">
-                    <span class="field-label">Total questions to export</span>
-                    <input id="question-count" name="questionCount" type="number" min="1" required>
-                    <small class="field-hint">Overall question target across the export.</small>
-                  </label>
-
-                  <label class="field">
-                    <span class="field-label">Questions per PDF batch</span>
-                    <input id="chunk-size" name="chunkSize" type="number" min="1" required>
-                    <small class="field-hint">Start a new file after this many questions.</small>
-                  </label>
-
-                  <label class="field field-span-full">
-                    <span class="field-label">Output directory</span>
-                    <input id="output-dir" name="outputDir" type="text" required>
-                  </label>
-                </div>
-              </section>
-
               <section class="workbench-card workbench-card-output workbench-card-primary-section">
                 <div class="workbench-card-header">
                   <div>
@@ -124,6 +86,39 @@
                       </label>
                     </div>
                   </div>
+                </div>
+              </section>
+
+              <section class="workbench-card workbench-card-overview workbench-card-primary-section">
+                <div class="workbench-card-header">
+                  <div>
+                    <p class="section-kicker">Scope</p>
+                    <h3>Choose the SAT window</h3>
+                  </div>
+                </div>
+
+                <div class="field-grid field-grid-overview">
+                  <label class="field">
+                    <span class="field-label">Assessment</span>
+                    <select id="assessment" name="assessment"></select>
+                  </label>
+
+                  <label class="field">
+                    <span class="field-label">Section</span>
+                    <select id="section" name="section"></select>
+                  </label>
+
+                  <label class="field">
+                    <span class="field-label">Total questions to export</span>
+                    <input id="question-count" name="questionCount" type="number" min="1" required>
+                    <small class="field-hint">Overall question target across the export.</small>
+                  </label>
+
+                  <label class="field">
+                    <span class="field-label">Questions per PDF batch</span>
+                    <input id="chunk-size" name="chunkSize" type="number" min="1" required>
+                    <small class="field-hint">Start a new file after this many questions.</small>
+                  </label>
                 </div>
               </section>
             </div>
@@ -266,7 +261,7 @@
                   <dd id="job-saved-count">0</dd>
                 </div>
                 <div>
-                  <dt>Output folder</dt>
+                  <dt>Delivery</dt>
                   <dd id="job-output">--</dd>
                 </div>
               </dl>
@@ -321,10 +316,6 @@
                 <div>
                   <dt>Mode</dt>
                   <dd id="preview-mode">--</dd>
-                </div>
-                <div>
-                  <dt>Output</dt>
-                  <dd id="preview-output">--</dd>
                 </div>
                 <div>
                   <dt>Available after cache</dt>
