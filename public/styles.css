@@ -115,9 +115,10 @@ button {
 .topbar-brand {
   display: inline-flex;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-1);
   min-width: 0;
   overflow: visible;
+  margin-left: -0.9rem;
 }
 
 .topbar-logo {
@@ -661,10 +662,6 @@ button {
   font-family: var(--font-display);
   font-size: clamp(1rem, 1.18vw, 1.28rem);
   line-height: 1.05;
-}
-
-.workbench-card-output .output-section-title {
-  color: rgba(32, 36, 42, 0.84);
 }
 
 .workbench-card-note {
