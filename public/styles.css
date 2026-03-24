@@ -111,9 +111,11 @@ button {
 .topbar {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   min-height: 3.25rem;
   margin-bottom: var(--space-2);
   padding: var(--space-1) 0 var(--space-2);
+  gap: var(--space-4);
 }
 
 .topbar-brand {
@@ -147,6 +149,28 @@ button {
   font-size: clamp(1.2rem, 1.5vw, 1.6rem);
   font-weight: 600;
   letter-spacing: 0.01em;
+  color: var(--color-ink);
+}
+
+.topbar-nav {
+  display: inline-flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+.topbar-nav a {
+  color: var(--color-secondary);
+  text-decoration: none;
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.topbar-nav a:hover {
+  text-decoration: underline;
+}
+
+.topbar-nav a[aria-current="page"] {
   color: var(--color-ink);
 }
 
@@ -190,22 +214,6 @@ button {
 
 .footer-note {
   margin: 0;
-}
-
-.footer-links {
-  display: inline-flex;
-  flex-wrap: wrap;
-  gap: var(--space-3);
-}
-
-.footer-links a {
-  color: var(--color-secondary);
-  text-decoration: none;
-  font-weight: 600;
-}
-
-.footer-links a:hover {
-  text-decoration: underline;
 }
 
 .static-layout {
@@ -1865,6 +1873,12 @@ input[type="text"]:focus {
 
   .topbar-title {
     font-size: 1.1rem;
+  }
+
+  .topbar-nav {
+    width: 100%;
+    justify-content: flex-start;
+    gap: var(--space-2) var(--space-3);
   }
 
   .topbar-logo {
