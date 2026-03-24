@@ -120,8 +120,8 @@ button {
 }
 
 .topbar-logo {
-  width: 1.9rem;
-  height: 1.9rem;
+  width: 2.45rem;
+  height: 2.45rem;
   object-fit: contain;
   flex: none;
   filter: drop-shadow(0 10px 18px rgba(197, 154, 66, 0.28));
@@ -657,8 +657,12 @@ button {
 .workbench-card-header h3 {
   margin: 0;
   font-family: var(--font-display);
-  font-size: clamp(1.08rem, 1.28vw, 1.38rem);
+  font-size: clamp(1rem, 1.18vw, 1.28rem);
   line-height: 1.05;
+}
+
+.workbench-card-output .output-section-title {
+  color: rgba(32, 36, 42, 0.84);
 }
 
 .workbench-card-note {
@@ -1618,8 +1622,8 @@ input[type="text"]:focus {
   }
 
   .topbar-logo {
-    width: 1.75rem;
-    height: 1.75rem;
+    width: 2.2rem;
+    height: 2.2rem;
   }
 
   .panel-form-primary {
@@ -1765,8 +1769,8 @@ input[type="text"]:focus {
   }
 
   .topbar-logo {
-    width: 1.7rem;
-    height: 1.7rem;
+    width: 2rem;
+    height: 2rem;
   }
 
   .panel-form,

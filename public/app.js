@@ -1094,8 +1094,8 @@ function renderActions() {
         ? 'Opening print dialog...'
         : 'Starting export...'
       : state.runtimeMode === 'browser'
-        ? 'Print packets'
-        : 'Start export job';
+        ? 'Start export'
+        : 'Start export';
 }
 
 function renderModal() {
