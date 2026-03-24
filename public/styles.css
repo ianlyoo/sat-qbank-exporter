@@ -20,8 +20,8 @@
   --color-danger: #a33d32;
   --color-danger-soft: #f9dfdb;
   --color-overlay: rgba(32, 36, 42, 0.44);
-  --shadow-soft: 0 12px 28px rgba(44, 33, 20, 0.055);
-  --shadow-card: 0 6px 16px rgba(38, 29, 18, 0.045);
+  --shadow-soft: none;
+  --shadow-card: none;
   --shadow-modal: 0 34px 92px rgba(38, 29, 18, 0.22);
   --radius-sm: 12px;
   --radius-md: 18px;
