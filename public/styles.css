@@ -403,7 +403,16 @@ button {
 }
 
 .panel-form-primary .workbench-card-output {
-  padding-bottom: var(--space-2);
+  padding-top: var(--space-1);
+  padding-bottom: var(--space-5);
+}
+
+.panel-form-primary .workbench-card-output .workbench-card-header {
+  margin-bottom: var(--space-5);
+}
+
+.panel-form-primary .workbench-card-output .settings-grid {
+  gap: var(--space-6);
 }
 
 .sidebar {
@@ -690,10 +699,11 @@ button {
 
 .panel-form-primary .settings-panel-flags {
   align-content: start;
+  padding-top: var(--space-1);
 }
 
 .panel-form-primary .settings-panel-flags .toggle-grid {
-  gap: var(--space-3);
+  gap: var(--space-4);
 }
 
 .settings-panel-mode {
