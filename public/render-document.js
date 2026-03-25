@@ -331,11 +331,13 @@ export function renderDocumentHtml({ batch, mode, includeAnswerKey = false, head
 
           .cover-meta {
             display: grid;
-            grid-template-columns: minmax(0, 28mm) minmax(0, 34mm) minmax(0, 1fr);
-            gap: 6mm;
+            grid-template-columns: minmax(0, 22mm) minmax(0, 26mm) minmax(0, 42mm) minmax(0, 1fr);
+            column-gap: 4mm;
+            row-gap: 5mm;
             margin: 12mm 0 0;
             padding-top: 5mm;
             border-top: 0.6px solid #e4ddd2;
+            align-items: start;
           }
 
           .cover-meta div {
