@@ -3,7 +3,13 @@ import fs from 'node:fs/promises';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 
-import { __testDoesPreviewMatchForm, __testFormatMode, __testIsPreviewComparable } from '../public/app.js';
+import {
+  __testCreateFormFromDefaults,
+  __testDoesPreviewMatchForm,
+  __testFormatMode,
+  __testIsPreviewComparable,
+  __testNormalizePersistedExportConfig,
+} from '../public/app.js';
 
 function createBaseConfig() {
   return {
@@ -85,6 +91,83 @@ test('preview mode labels use the updated UI copy', () => {
   assert.equal(__testFormatMode('clean', true), 'Clean + Answer key');
 });
 
+test('saved export preferences restore the last exported form when enabled', () => {
+  const lookup = {
+    assessments: ['SAT', 'PSAT 8/9'],
+    sections: ['Math', 'Reading and Writing'],
+    domainsBySection: {
+      Math: [
+        {
+          label: 'Algebra',
+          skills: ['Linear functions'],
+        },
+      ],
+      'Reading and Writing': [],
+    },
+  };
+
+  const defaults = {
+    assessment: 'SAT',
+    section: 'Math',
+    domains: ['Algebra'],
+    skills: ['Linear functions'],
+    difficulty: ['Easy'],
+    questionCount: 20,
+    chunkSize: 20,
+    mode: 'student',
+    includeAnswerKey: false,
+    outputDir: './output',
+    shuffle: true,
+    excludeExported: false,
+  };
+
+  const restored = __testCreateFormFromDefaults(defaults, lookup, {
+    enabled: true,
+    config: {
+      ...defaults,
+      questionCount: 35,
+      chunkSize: 10,
+      mode: 'clean',
+      excludeExported: true,
+    },
+  });
+
+  assert.equal(restored.questionCount, 35);
+  assert.equal(restored.chunkSize, 10);
+  assert.equal(restored.mode, 'clean');
+  assert.equal(restored.excludeExported, true);
+  assert.equal(restored.saveLastExportSettings, true);
+
+  const fallback = __testCreateFormFromDefaults(defaults, lookup, {
+    enabled: false,
+    config: {
+      ...defaults,
+      questionCount: 35,
+    },
+  });
+
+  assert.equal(fallback.questionCount, 20);
+  assert.equal(fallback.saveLastExportSettings, false);
+});
+
+test('persisted export config normalization keeps only supported fields', () => {
+  assert.deepEqual(__testNormalizePersistedExportConfig(null), null);
+  assert.deepEqual(__testNormalizePersistedExportConfig({ assessment: 'SAT', domains: ['Algebra'] }), {
+    assessment: 'SAT',
+    section: '',
+    domains: ['Algebra'],
+    skills: [],
+    difficulty: [],
+    questionCount: 20,
+    chunkSize: 20,
+    mode: 'student',
+    includeAnswerKey: false,
+    outputDir: './output',
+    shuffle: true,
+    excludeExported: false,
+  });
+});
+
 test('mode options use the updated labels and expose the answer key toggle', async () => {
   const indexPath = fileURLToPath(new URL('../public/index.html', import.meta.url));
   const html = await fs.readFile(indexPath, 'utf8');
@@ -98,4 +181,6 @@ test('mode options use the updated labels and expose the answer key toggle', asy
   assert.doesNotMatch(html, /Output directory/);
   assert.doesNotMatch(html, /id="output-dir"/);
   assert.match(html, /id="include-answer-key"/);
+  assert.match(html, /id="save-last-export-settings"/);
+  assert.match(html, /Save last export settings/);
 });

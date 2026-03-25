@@ -1292,6 +1292,84 @@ input[type="text"]:focus {
   word-break: break-word;
 }
 
+.preview-history-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+
+.mini-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  margin-left: auto;
+  color: var(--color-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+}
+
+.mini-toggle input {
+  position: absolute;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.mini-toggle-track {
+  position: relative;
+  width: 2rem;
+  height: 1.15rem;
+  border-radius: 999px;
+  background: rgba(52, 43, 31, 0.14);
+  border: 1px solid rgba(37, 73, 66, 0.14);
+  transition: background-color 160ms ease, border-color 160ms ease;
+  flex: 0 0 auto;
+}
+
+.mini-toggle-track::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 0.16rem;
+  width: 0.8rem;
+  height: 0.8rem;
+  border-radius: 50%;
+  background: #fffdf8;
+  box-shadow: 0 1px 4px rgba(32, 36, 42, 0.18);
+  transform: translateY(-50%);
+  transition: transform 160ms ease;
+}
+
+.mini-toggle-copy {
+  line-height: 1.2;
+}
+
+.mini-toggle:has(input:checked) {
+  color: var(--color-secondary);
+}
+
+.mini-toggle:has(input:checked) .mini-toggle-track {
+  background: rgba(37, 73, 66, 0.88);
+  border-color: rgba(37, 73, 66, 0.88);
+}
+
+.mini-toggle:has(input:checked) .mini-toggle-track::after {
+  transform: translate(0.83rem, -50%);
+}
+
+.mini-toggle:has(input:focus-visible) .mini-toggle-track {
+  outline: 2px solid rgba(182, 109, 52, 0.34);
+  outline-offset: 2px;
+}
+
+.mini-toggle:has(input:disabled) {
+  opacity: 0.6;
+  cursor: default;
+}
+
 .summary-chip {
   display: inline-flex;
   align-items: center;

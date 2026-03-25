@@ -11,6 +11,7 @@ import {
 
 const DIFFICULTY_OPTIONS = ['Easy', 'Medium', 'Hard'];
 const ACTIVE_JOB_STORAGE_KEY = 'sat-exporter-active-job-id';
+const LAST_EXPORT_SETTINGS_STORAGE_KEY = 'sat-exporter-last-config-v1';
 const MODE_LABELS = {
   student: 'Default',
   teacher: 'Default + Key',
@@ -60,6 +61,7 @@ const state = {
     outputDir: './output',
     shuffle: true,
     excludeExported: false,
+    saveLastExportSettings: false,
   },
 };
 
@@ -120,6 +122,7 @@ function cacheDom() {
   dom.previewMode = document.getElementById('preview-mode');
   dom.previewAvailable = document.getElementById('preview-available');
   dom.previewSkipped = document.getElementById('preview-skipped');
+  dom.saveLastExportSettings = document.getElementById('save-last-export-settings');
   dom.previewDomains = document.getElementById('preview-domains');
   dom.previewSkills = document.getElementById('preview-skills');
   dom.previewDifficulty = document.getElementById('preview-difficulty');
@@ -163,6 +166,14 @@ function bindEvents() {
 
   dom.excludeExported.addEventListener('change', (event) => {
     updateForm({ excludeExported: event.target.checked });
+  });
+
+  dom.saveLastExportSettings.addEventListener('change', (event) => {
+    updateForm({ saveLastExportSettings: event.target.checked });
+    writeSavedExportPreferences({
+      ...readSavedExportPreferences(),
+      enabled: event.target.checked,
+    });
   });
 
   document.querySelectorAll('input[name="mode"]').forEach((input) => {
@@ -291,6 +302,87 @@ function cleanupBrowserPrintFrame(frame) {
   frame?.remove();
 }
 
+function getLocalStorage() {
+  if (typeof window === 'undefined' || !window.localStorage) {
+    return null;
+  }
+
+  return window.localStorage;
+}
+
+function normalizePersistedExportConfig(value) {
+  if (!value || typeof value !== 'object') {
+    return null;
+  }
+
+  return {
+    assessment: typeof value.assessment === 'string' ? value.assessment : '',
+    section: typeof value.section === 'string' ? value.section : '',
+    domains: Array.isArray(value.domains) ? [...value.domains].map(String) : [],
+    skills: Array.isArray(value.skills) ? [...value.skills].map(String) : [],
+    difficulty: Array.isArray(value.difficulty) ? [...value.difficulty].map(String) : [],
+    questionCount: Number(value.questionCount) || 20,
+    chunkSize: Number(value.chunkSize) || 20,
+    mode: typeof value.mode === 'string' ? value.mode : 'student',
+    includeAnswerKey: Boolean(value.includeAnswerKey),
+    outputDir: typeof value.outputDir === 'string' ? value.outputDir : './output',
+    shuffle: Boolean(value.shuffle ?? true),
+    excludeExported: Boolean(value.excludeExported),
+  };
+}
+
+function createPersistedExportConfig(form) {
+  return normalizePersistedExportConfig(form);
+}
+
+function readSavedExportPreferences() {
+  try {
+    const storage = getLocalStorage();
+    const raw = storage?.getItem(LAST_EXPORT_SETTINGS_STORAGE_KEY);
+    if (!raw) {
+      return { enabled: false, config: null };
+    }
+
+    const parsed = JSON.parse(raw);
+    return {
+      enabled: Boolean(parsed?.enabled),
+      config: normalizePersistedExportConfig(parsed?.config),
+    };
+  } catch {
+    return { enabled: false, config: null };
+  }
+}
+
+function writeSavedExportPreferences(preferences) {
+  try {
+    const storage = getLocalStorage();
+    if (!storage) {
+      return;
+    }
+
+    storage.setItem(
+      LAST_EXPORT_SETTINGS_STORAGE_KEY,
+      JSON.stringify({
+        enabled: Boolean(preferences?.enabled),
+        config: normalizePersistedExportConfig(preferences?.config),
+      })
+    );
+  } catch {
+    // Ignore local preference persistence failures and keep the app usable.
+  }
+}
+
+function persistLastExportSettingsIfEnabled() {
+  const savedPreferences = readSavedExportPreferences();
+
+  writeSavedExportPreferences({
+    enabled: state.form.saveLastExportSettings,
+    config: state.form.saveLastExportSettings
+      ? createPersistedExportConfig(state.form)
+      : savedPreferences.config,
+  });
+}
+
 async function boot() {
   clearError();
   stopPolling();
@@ -315,7 +407,7 @@ async function boot() {
 
     state.runtimeMode = apiRuntimeAvailable ? 'api' : 'browser';
     const persistedJobId = apiRuntimeAvailable ? readActiveJobId() : '';
-    state.form = createFormFromDefaults(state.defaults, state.lookup);
+    state.form = createFormFromDefaults(state.defaults, state.lookup, readSavedExportPreferences());
     state.preview = null;
     state.previewStale = false;
     state.job = null;
@@ -336,26 +428,37 @@ async function boot() {
   }
 }
 
-function createFormFromDefaults(defaults, lookup) {
+function createFormFromDefaults(defaults, lookup, savedPreferences = { enabled: false, config: null }) {
   const assessments = lookup?.assessments || [];
   const sections = lookup?.sections || [];
-  const assessment = assessments.includes(defaults?.assessment) ? defaults.assessment : assessments[0] || '';
-  const section = sections.includes(defaults?.section) ? defaults.section : sections[0] || '';
+  const source =
+    savedPreferences?.enabled && savedPreferences?.config ? savedPreferences.config : defaults;
+  const assessment = assessments.includes(source?.assessment)
+    ? source.assessment
+    : assessments.includes(defaults?.assessment)
+    ? defaults.assessment
+    : assessments[0] || '';
+  const section = sections.includes(source?.section)
+    ? source.section
+    : sections.includes(defaults?.section)
+    ? defaults.section
+    : sections[0] || '';
 
   return sanitizeForm(
     {
       assessment,
       section,
-      domains: Array.isArray(defaults?.domains) ? [...defaults.domains] : [],
-      skills: Array.isArray(defaults?.skills) ? [...defaults.skills] : [],
-      difficulty: Array.isArray(defaults?.difficulty) ? [...defaults.difficulty] : [],
-      questionCount: defaults?.questionCount ?? 20,
-      chunkSize: defaults?.chunkSize ?? 20,
-      mode: defaults?.mode || 'student',
-      includeAnswerKey: Boolean(defaults?.includeAnswerKey),
-      outputDir: defaults?.outputDir || './output',
-      shuffle: Boolean(defaults?.shuffle ?? true),
-      excludeExported: Boolean(defaults?.excludeExported ?? false),
+      domains: Array.isArray(source?.domains) ? [...source.domains] : [],
+      skills: Array.isArray(source?.skills) ? [...source.skills] : [],
+      difficulty: Array.isArray(source?.difficulty) ? [...source.difficulty] : [],
+      questionCount: source?.questionCount ?? 20,
+      chunkSize: source?.chunkSize ?? 20,
+      mode: source?.mode || 'student',
+      includeAnswerKey: Boolean(source?.includeAnswerKey),
+      outputDir: source?.outputDir || './output',
+      shuffle: Boolean(source?.shuffle ?? true),
+      excludeExported: Boolean(source?.excludeExported ?? false),
+      saveLastExportSettings: Boolean(savedPreferences?.enabled),
     },
     { autoChooseDomain: true }
   );
@@ -446,6 +549,14 @@ export function __testIsPreviewComparable(form) {
 
 export function __testFormatHistoryUpdatedAt(value) {
   return formatHistoryUpdatedAt(value);
+}
+
+export function __testCreateFormFromDefaults(defaults, lookup, savedPreferences) {
+  return createFormFromDefaults(defaults, lookup, savedPreferences);
+}
+
+export function __testNormalizePersistedExportConfig(value) {
+  return normalizePersistedExportConfig(value);
 }
 
 function getDomainsForSection(section) {
@@ -593,6 +704,7 @@ async function startExport() {
           outputDir: result.downloadedPdfCount > 0 ? 'Browser download' : result.outputDir,
           error: null,
         };
+        persistLastExportSettingsIfEnabled();
         state.previewStale = false;
         render();
         return;
@@ -621,6 +733,7 @@ async function startExport() {
       outputDir: state.preview?.outputDir || state.form.outputDir,
       error: null,
     };
+    persistLastExportSettingsIfEnabled();
     state.previewStale = false;
     render();
     await pollStatus();
@@ -1061,6 +1174,7 @@ function renderInputs() {
   dom.includeAnswerKey.checked = state.form.includeAnswerKey;
   dom.shuffle.checked = state.form.shuffle;
   dom.excludeExported.checked = state.form.excludeExported;
+  dom.saveLastExportSettings.checked = state.form.saveLastExportSettings;
 
   document.querySelectorAll('input[name="mode"]').forEach((input) => {
     input.checked = input.value === state.form.mode;
@@ -1072,6 +1186,7 @@ function renderInputs() {
   dom.includeAnswerKey.disabled = disabled;
   dom.shuffle.disabled = disabled;
   dom.excludeExported.disabled = disabled;
+  dom.saveLastExportSettings.disabled = disabled;
   document.querySelectorAll('input[name="mode"]').forEach((input) => {
     input.disabled = disabled;
   });

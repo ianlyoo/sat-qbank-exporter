@@ -154,11 +154,11 @@ function renderCoverPage(batch, headerText, mode, includeAnswerKey) {
             <dd>${escapeHtml(formatModeLabel(mode))}</dd>
           </div>
           <div class="cover-meta-domains">
-            <dt>Included Domains</dt>
+            <dt>Domains</dt>
             <dd>${escapeHtml(domains.join(', ') || 'Not specified')}</dd>
           </div>
           <div class="cover-meta-skills">
-            <dt>Included Skills</dt>
+            <dt>Skills</dt>
             <dd>${escapeHtml(skills.join(', ') || 'Not specified')}</dd>
           </div>
         </dl>
