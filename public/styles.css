@@ -317,7 +317,7 @@ button {
   align-content: start;
   min-height: 0;
   overflow: auto;
-  padding: var(--space-1) var(--space-1) 0 0;
+  padding: calc(var(--space-1) + 0.2rem) var(--space-1) var(--space-1) 0;
 }
 
 @media (min-width: 1081px) {
@@ -422,11 +422,11 @@ button {
   }
 
   .filter-panel-domains .chip-wrap {
-    max-height: min(10rem, 18vh);
+    max-height: min(10.75rem, 19vh);
   }
 
   .filter-panel-skills .chip-wrap {
-    max-height: min(10.5rem, 20vh);
+    max-height: min(11.25rem, 21vh);
   }
 
   .filter-panel-difficulty .chip-wrap {
@@ -462,9 +462,10 @@ button {
   }
 
   .chip {
-    min-height: 1.8rem;
-    padding: 0 0.85rem;
+    min-height: 1.95rem;
+    padding: 0.18rem 0.9rem;
     font-size: 0.9rem;
+    line-height: 1.12;
   }
 
   .summary-chip {
@@ -813,10 +814,10 @@ button {
 
 .filter-panel {
   display: grid;
-  grid-template-rows: auto auto;
+  grid-template-rows: auto minmax(0, 1fr);
   align-content: start;
   min-height: 0;
-  gap: var(--space-3);
+  gap: var(--space-2);
   padding: var(--space-4);
   min-height: 10.75rem;
 }
@@ -827,6 +828,11 @@ button {
   justify-content: space-between;
   gap: var(--space-3);
   margin-bottom: var(--space-2);
+}
+
+.fieldset-header p {
+  margin: 0.35rem 0 0;
+  line-height: 1.42;
 }
 
 .fieldset-actions {
@@ -880,7 +886,7 @@ input[type="text"]:focus {
 
 .filter-panel-domains .chip-wrap,
 .filter-panel-skills .chip-wrap {
-  max-height: 11rem;
+  max-height: 12rem;
 }
 
 .filter-panel-difficulty .chip-wrap {
@@ -905,14 +911,15 @@ input[type="text"]:focus {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 2rem;
-  padding: 0 var(--space-3);
+  min-height: 2.2rem;
+  padding: 0.2rem var(--space-3);
   border: 1px solid transparent;
   border-radius: var(--radius-pill);
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.88), rgba(249, 243, 236, 0.92)) padding-box,
     linear-gradient(180deg, rgba(37, 73, 66, 0.18), rgba(37, 73, 66, 0.08)) border-box;
   color: var(--color-secondary);
+  line-height: 1.15;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.85);
 }
 
@@ -1782,11 +1789,11 @@ input[type="text"]:focus {
   }
 
   .filter-panel-domains .chip-wrap {
-    max-height: min(8rem, 15vh);
+    max-height: min(8.75rem, 16vh);
   }
 
   .filter-panel-skills .chip-wrap {
-    max-height: min(8.25rem, 16vh);
+    max-height: min(9rem, 17vh);
   }
 
   .filter-panel-difficulty .chip-wrap {
