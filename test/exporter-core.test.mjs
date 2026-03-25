@@ -195,6 +195,7 @@ test('renderDocumentHtml includes fixed page layout scaffolding', () => {
   assert.match(html, /Batch Index/);
   assert.match(html, /Included Questions/);
   assert.match(html, /Included Domains/);
+  assert.match(html, /Included Skills/);
   assert.match(html, /<dt>Mode<\/dt>/);
   assert.match(html, /Default/);
   assert.match(html, /Questions only, plus an answer appendix\./);

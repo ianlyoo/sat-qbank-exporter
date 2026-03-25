@@ -25,6 +25,8 @@ test('browser render document module builds printable packet html', () => {
 
   assert.match(html, /SAT Math - Batch 1/);
   assert.match(html, /Question Q1/);
+  assert.match(html, /Included Skills/);
+  assert.match(html, /Linear functions/);
   assert.match(html, /__SAT_PDF_LAYOUT_DONE__/);
 });
 

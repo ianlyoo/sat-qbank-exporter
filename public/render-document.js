@@ -102,6 +102,10 @@ function getIncludedDomains(batch) {
   return [...new Set(batch.map((item) => item.domain).filter(Boolean))];
 }
 
+function getIncludedSkills(batch) {
+  return [...new Set(batch.map((item) => item.skill).filter(Boolean))];
+}
+
 function formatModeLabel(mode) {
   switch (mode) {
     case EXPORT_MODES.teacher:
@@ -132,6 +136,7 @@ function getCoverSubtitle(mode, includeAnswerKey) {
 
 function renderCoverPage(batch, headerText, mode, includeAnswerKey) {
   const domains = getIncludedDomains(batch);
+  const skills = getIncludedSkills(batch);
 
   return `
     <section class="print-page cover-page">
@@ -151,6 +156,10 @@ function renderCoverPage(batch, headerText, mode, includeAnswerKey) {
           <div class="cover-meta-domains">
             <dt>Included Domains</dt>
             <dd>${escapeHtml(domains.join(', ') || 'Not specified')}</dd>
+          </div>
+          <div class="cover-meta-skills">
+            <dt>Included Skills</dt>
+            <dd>${escapeHtml(skills.join(', ') || 'Not specified')}</dd>
           </div>
         </dl>
       </div>
@@ -349,7 +358,8 @@ export function renderDocumentHtml({ batch, mode, includeAnswerKey = false, head
             line-height: 1.5;
           }
 
-          .cover-meta-domains dd {
+          .cover-meta-domains dd,
+          .cover-meta-skills dd {
             max-width: 100%;
           }
 
