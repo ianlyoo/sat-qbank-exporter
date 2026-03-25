@@ -20,7 +20,6 @@ function createBaseConfig() {
     shuffle: true,
     excludeActive: false,
     excludeExported: false,
-    autoDownloadPdf: false,
   };
 }
 

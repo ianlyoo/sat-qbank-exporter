@@ -173,7 +173,6 @@ function normalizeExportOptions(input = {}) {
     excludeActive: parseBoolean(merged.excludeActive, DEFAULT_EXPORT_OPTIONS.excludeActive),
     excludeExported: parseBoolean(merged.excludeExported, DEFAULT_EXPORT_OPTIONS.excludeExported),
     shuffle: parseBoolean(merged.shuffle, DEFAULT_EXPORT_OPTIONS.shuffle),
-    autoDownloadPdf: parseBoolean(merged.autoDownloadPdf, DEFAULT_EXPORT_OPTIONS.autoDownloadPdf),
     fromPage: parseInteger(merged.fromPage, DEFAULT_EXPORT_OPTIONS.fromPage),
     toPage:
       merged.toPage === null || merged.toPage === undefined || merged.toPage === ''
@@ -707,138 +706,6 @@ function downloadBlobFile(filename, blob) {
   window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
 }
 
-function createPreviewEntry(filename, blob, type = 'text/html') {
-  return {
-    delivery: 'preview',
-    label: filename,
-    url: URL.createObjectURL(blob),
-    blob,
-    type,
-  };
-}
-
-function escapePreviewHtml(value) {
-  return String(value)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;');
-}
-
-function renderVisiblePreviewIndex(entries, { readyCount, totalBatches }) {
-  const resourceLabel =
-    entries.some((entry) => entry.type === 'application/pdf') ? 'PDF' : 'preview';
-  const links = entries.length
-    ? entries
-        .map(
-          (entry, index) => `
-            <li>
-              <a href="${entry.url}" target="_blank" rel="noreferrer">${escapePreviewHtml(entry.label)}</a>
-              <span>Batch ${index + 1}</span>
-            </li>
-          `
-        )
-        .join('')
-    : '<li><span>Preparing the first batch…</span></li>';
-
-  return `<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Packet previews</title>
-    <style>
-      :root {
-        color-scheme: light;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-      }
-      body {
-        margin: 0;
-        padding: 24px;
-        background: #f7f3ed;
-        color: #1f2f2a;
-      }
-      main {
-        max-width: 760px;
-        margin: 0 auto;
-        padding: 24px;
-        border-radius: 20px;
-        background: rgba(255, 255, 255, 0.92);
-        border: 1px solid rgba(37, 73, 66, 0.12);
-      }
-      h1 {
-        margin: 0 0 12px;
-        font-size: 1.5rem;
-      }
-      p {
-        margin: 0 0 12px;
-        line-height: 1.5;
-      }
-      ul {
-        margin: 20px 0 0;
-        padding: 0;
-        list-style: none;
-        display: grid;
-        gap: 12px;
-      }
-      li {
-        display: flex;
-        flex-wrap: wrap;
-        align-items: center;
-        justify-content: space-between;
-        gap: 10px;
-        padding: 14px 16px;
-        border-radius: 16px;
-        background: #fffaf5;
-        border: 1px solid rgba(37, 73, 66, 0.12);
-      }
-      a {
-        color: #244942;
-        font-weight: 600;
-        text-decoration: none;
-      }
-      span {
-        color: #5d6663;
-        font-size: 0.95rem;
-      }
-    </style>
-  </head>
-  <body>
-    <main>
-      <h1>Packet ${resourceLabel === 'PDF' ? 'PDFs' : 'previews'} are ready</h1>
-      <p>Prepared ${readyCount} of ${totalBatches} batch${totalBatches === 1 ? '' : 'es'}.</p>
-      <p>${
-        resourceLabel === 'PDF'
-          ? 'Open a batch PDF, then use Share or Save to Files on your device.'
-          : 'Open a batch, then use Share or Print on your device to save it as PDF.'
-      }</p>
-      <ul>${links}</ul>
-    </main>
-  </body>
-</html>`;
-}
-
-function updateVisiblePreviewWindow(previewWindow, entries, { totalBatches }) {
-  if (!previewWindow || previewWindow.closed) {
-    return false;
-  }
-
-  const doc = previewWindow.document;
-  if (!doc) {
-    return false;
-  }
-
-  doc.open();
-  doc.write(
-    renderVisiblePreviewIndex(entries, {
-      readyCount: entries.length,
-      totalBatches,
-    })
-  );
-  doc.close();
-  return true;
-}
-
 async function waitForFrameLoad(frame, url) {
   await new Promise((resolve, reject) => {
     const cleanup = () => {
@@ -1011,7 +878,12 @@ async function renderPdfPreview(filename, contents, renderFrame) {
     }
 
     const pdfBlob = pdf.output('blob');
-    return createPreviewEntry(filename, pdfBlob, 'application/pdf');
+    return {
+      delivery: 'pdf-download',
+      label: filename,
+      blob: pdfBlob,
+      type: 'application/pdf',
+    };
   } finally {
     window.setTimeout(() => URL.revokeObjectURL(htmlUrl), 60_000);
     renderFrame.removeAttribute('src');
@@ -1145,15 +1017,15 @@ export async function previewBrowserExport(input) {
 
 export async function runBrowserExport(
   input,
-  { onProgress, printFrame = null, renderFrame = null, visiblePreviewWindow = null } = {}
+  { onProgress, printFrame = null, renderFrame = null } = {}
 ) {
   const prepared = await prepareExport(input, { onProgress });
   const savedFiles = [];
-  const previewEntries = [];
   let openedPreviewCount = 0;
+  let downloadedPdfCount = 0;
   let fallbackDownloadCount = 0;
   const renderOptions = resolveBrowserRenderOptions(prepared.config);
-  const preferVisiblePreview =
+  const preferMobilePdfDownload =
     shouldPreferVisiblePreviewWindow(typeof navigator === 'object' ? navigator : {}) && !printFrame;
 
   emitProgress(onProgress, {
@@ -1221,37 +1093,18 @@ export async function runBrowserExport(
     );
     let delivery;
 
-    if (preferVisiblePreview && visiblePreviewWindow) {
+    if (preferMobilePdfDownload) {
       try {
         delivery = await renderPdfPreview(filename, html, renderFrame);
-        previewEntries.push(delivery);
-
-        if (prepared.config.autoDownloadPdf && delivery.type === 'application/pdf') {
-          downloadBlobFile(delivery.label, delivery.blob);
-        }
-
-        if (prepared.exportBatchCount === 1) {
-          visiblePreviewWindow.location.replace(delivery.url);
-        } else {
-          updateVisiblePreviewWindow(visiblePreviewWindow, previewEntries, {
-            totalBatches: prepared.exportBatchCount,
-          });
-        }
+        downloadBlobFile(delivery.label, delivery.blob);
       } catch {
-        const htmlDelivery = createPreviewEntry(
-          createHtmlFallbackFilename(filename),
-          new Blob([html], { type: 'text/html;charset=utf-8' })
-        );
-        delivery = htmlDelivery;
-        previewEntries.push(delivery);
-
-        if (prepared.exportBatchCount === 1) {
-          visiblePreviewWindow.location.replace(delivery.url);
-        } else {
-          updateVisiblePreviewWindow(visiblePreviewWindow, previewEntries, {
-            totalBatches: prepared.exportBatchCount,
-          });
-        }
+        const fallbackFilename = createHtmlFallbackFilename(filename);
+        downloadTextFile(fallbackFilename, html);
+        delivery = {
+          delivery: 'download',
+          label: fallbackFilename,
+          type: 'text/html',
+        };
       }
     } else {
       delivery = await openPrintablePreview(filename, html, printFrame);
@@ -1264,6 +1117,8 @@ export async function runBrowserExport(
     savedFiles.push(delivery.label);
     if (delivery.delivery === 'preview') {
       openedPreviewCount += 1;
+    } else if (delivery.delivery === 'pdf-download') {
+      downloadedPdfCount += 1;
     } else {
       fallbackDownloadCount += 1;
     }
@@ -1274,12 +1129,8 @@ export async function runBrowserExport(
       message:
         delivery.delivery === 'print'
           ? `Opened the print dialog for ${filename}. Use Save as PDF.`
-          : delivery.delivery === 'preview' &&
-              delivery.type === 'application/pdf' &&
-              prepared.config.autoDownloadPdf
-            ? `Started downloading ${delivery.label}. If your browser blocks it, use the opened PDF preview.`
-          : delivery.delivery === 'preview' && delivery.type === 'application/pdf'
-            ? `Opened ${delivery.label} as a PDF preview. Use Share or Save to Files.`
+          : delivery.delivery === 'pdf-download'
+            ? `Started downloading ${delivery.label} in your browser.`
           : delivery.delivery === 'preview'
             ? `Opened ${delivery.label} in a preview tab. Use Share or Print to save it as PDF.`
           : `Popup blocked, so ${delivery.label} was downloaded instead.`,
@@ -1299,6 +1150,7 @@ export async function runBrowserExport(
     totalBatches: prepared.exportBatchCount,
     savedFiles,
     openedPreviewCount,
+    downloadedPdfCount,
     fallbackDownloadCount,
     outputDir: 'Browser print dialog',
     config: prepared.config,

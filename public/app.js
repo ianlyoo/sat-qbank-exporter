@@ -60,7 +60,6 @@ const state = {
     outputDir: './output',
     shuffle: true,
     excludeExported: false,
-    autoDownloadPdf: false,
   },
 };
 
@@ -96,7 +95,6 @@ function cacheDom() {
   dom.includeAnswerKey = document.getElementById('include-answer-key');
   dom.shuffle = document.getElementById('shuffle');
   dom.excludeExported = document.getElementById('exclude-exported');
-  dom.autoDownloadPdf = document.getElementById('auto-download-pdf');
   dom.previewButton = document.getElementById('preview-button');
   dom.exportButton = document.getElementById('export-button');
   dom.clearHistoryButton = document.getElementById('clear-history-button');
@@ -165,10 +163,6 @@ function bindEvents() {
 
   dom.excludeExported.addEventListener('change', (event) => {
     updateForm({ excludeExported: event.target.checked });
-  });
-
-  dom.autoDownloadPdf.addEventListener('change', (event) => {
-    updateForm({ autoDownloadPdf: event.target.checked });
   });
 
   document.querySelectorAll('input[name="mode"]').forEach((input) => {
@@ -293,40 +287,6 @@ function prepareBrowserPrintFrame() {
   return frame;
 }
 
-function openVisiblePreviewWindow() {
-  if (typeof window === 'undefined' || typeof window.open !== 'function') {
-    return null;
-  }
-
-  const previewWindow = window.open('', '_blank');
-  if (!previewWindow) {
-    return null;
-  }
-
-  previewWindow.document.write(`<!doctype html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Preparing packet preview</title>
-    <style>
-      body {
-        margin: 0;
-        padding: 24px;
-        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-        background: #f7f3ed;
-        color: #1f2f2a;
-      }
-    </style>
-  </head>
-  <body>
-    <p>Preparing your packet preview…</p>
-  </body>
-</html>`);
-  previewWindow.document.close();
-  return previewWindow;
-}
-
 function cleanupBrowserPrintFrame(frame) {
   frame?.remove();
 }
@@ -396,7 +356,6 @@ function createFormFromDefaults(defaults, lookup) {
       outputDir: defaults?.outputDir || './output',
       shuffle: Boolean(defaults?.shuffle ?? true),
       excludeExported: Boolean(defaults?.excludeExported ?? false),
-      autoDownloadPdf: Boolean(defaults?.autoDownloadPdf ?? false),
     },
     { autoChooseDomain: true }
   );
@@ -468,7 +427,6 @@ function doesPreviewMatchForm(preview, form) {
     'outputDir',
     'shuffle',
     'excludeExported',
-    'autoDownloadPdf',
   ];
 
   return fields.every((field) => {
@@ -586,31 +544,29 @@ async function startExport() {
     if (state.runtimeMode === 'browser') {
       state.jobId = '';
       clearActiveJobId();
-      const useVisiblePreviewWindow = shouldPreferVisiblePreviewWindow(
+      const useMobilePdfDownload = shouldPreferVisiblePreviewWindow(
         typeof navigator === 'object' ? navigator : {}
       );
-      const visiblePreviewWindow = useVisiblePreviewWindow ? openVisiblePreviewWindow() : null;
       state.job = {
         state: 'running',
         phase: 'queued',
-        message: useVisiblePreviewWindow
-          ? 'Preparing mobile PDF previews…'
+        message: useMobilePdfDownload
+          ? 'Preparing mobile PDF downloads…'
           : 'Preparing browser print previews…',
         currentBatch: null,
         totalBatches: state.preview?.exportBatches ?? null,
         savedFiles: [],
-        outputDir: useVisiblePreviewWindow ? 'Preview tab' : 'Browser print dialog',
+        outputDir: useMobilePdfDownload ? 'Browser download' : 'Browser print dialog',
         error: null,
       };
       render();
       const browserFrame = prepareBrowserPrintFrame();
-      const printFrame = useVisiblePreviewWindow ? null : browserFrame;
+      const printFrame = useMobilePdfDownload ? null : browserFrame;
 
       try {
         const result = await runBrowserExport(buildPayload(), {
           printFrame,
           renderFrame: browserFrame,
-          visiblePreviewWindow,
           onProgress(progress) {
             state.job = {
               ...state.job,
@@ -624,7 +580,9 @@ async function startExport() {
           state: 'completed',
           phase: 'completed',
           message:
-            result.openedPreviewCount > 0
+            result.downloadedPdfCount > 0
+              ? 'Started downloading the generated batch PDFs in your browser.'
+              : result.openedPreviewCount > 0
               ? 'Opened generated batch PDFs in preview tabs. Use Share or Save to Files there.'
               : result.fallbackDownloadCount > 0
               ? 'The browser could not open the print dialog for some batches, so HTML files were downloaded instead.'
@@ -632,7 +590,7 @@ async function startExport() {
           currentBatch: result.totalBatches,
           totalBatches: result.totalBatches,
           savedFiles: result.savedFiles,
-          outputDir: result.openedPreviewCount > 0 ? 'Preview tab' : result.outputDir,
+          outputDir: result.downloadedPdfCount > 0 ? 'Browser download' : result.outputDir,
           error: null,
         };
         state.previewStale = false;
@@ -915,7 +873,6 @@ function buildPayload() {
     shuffle: state.form.shuffle,
     excludeActive: false,
     excludeExported: state.form.excludeExported,
-    autoDownloadPdf: state.form.autoDownloadPdf,
   };
 }
 
@@ -1104,7 +1061,6 @@ function renderInputs() {
   dom.includeAnswerKey.checked = state.form.includeAnswerKey;
   dom.shuffle.checked = state.form.shuffle;
   dom.excludeExported.checked = state.form.excludeExported;
-  dom.autoDownloadPdf.checked = state.form.autoDownloadPdf;
 
   document.querySelectorAll('input[name="mode"]').forEach((input) => {
     input.checked = input.value === state.form.mode;
@@ -1116,7 +1072,6 @@ function renderInputs() {
   dom.includeAnswerKey.disabled = disabled;
   dom.shuffle.disabled = disabled;
   dom.excludeExported.disabled = disabled;
-  dom.autoDownloadPdf.disabled = disabled;
   document.querySelectorAll('input[name="mode"]').forEach((input) => {
     input.disabled = disabled;
   });

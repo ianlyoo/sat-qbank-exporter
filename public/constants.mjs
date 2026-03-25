@@ -27,7 +27,6 @@ export const DEFAULT_EXPORT_OPTIONS = {
   excludeActive: false,
   excludeExported: false,
   shuffle: true,
-  autoDownloadPdf: false,
   fromPage: 1,
   toPage: null,
   headed: false,
