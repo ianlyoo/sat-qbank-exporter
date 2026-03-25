@@ -18,6 +18,18 @@ const EXPORT_HISTORY_VERSION = 2;
 
 let lookupCache = null;
 
+export function shouldPreferVisiblePreviewWindow(environment = {}) {
+  const userAgent = String(environment.userAgent || '');
+  const platform = String(environment.platform || '');
+  const maxTouchPoints = Number(environment.maxTouchPoints || 0);
+  const isTouchMac = platform === 'MacIntel' && maxTouchPoints > 1;
+  const isAppleMobile = /iPhone|iPad|iPod/.test(userAgent) || isTouchMac;
+  const isMobile =
+    /Android|webOS|BlackBerry|IEMobile|Opera Mini|Mobile/.test(userAgent) || isAppleMobile;
+
+  return isMobile;
+}
+
 function getLocalStorage() {
   if (typeof window === 'undefined' || !window.localStorage) {
     throw new Error('Browser storage is unavailable in this environment.');
@@ -682,6 +694,132 @@ function downloadTextFile(filename, contents) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+function createPreviewEntry(filename, contents) {
+  const previewFilename = createHtmlFallbackFilename(filename);
+  const blob = new Blob([contents], { type: 'text/html;charset=utf-8' });
+  return {
+    delivery: 'preview',
+    label: previewFilename,
+    url: URL.createObjectURL(blob),
+  };
+}
+
+function escapePreviewHtml(value) {
+  return String(value)
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;');
+}
+
+function renderVisiblePreviewIndex(entries, { readyCount, totalBatches }) {
+  const links = entries.length
+    ? entries
+        .map(
+          (entry, index) => `
+            <li>
+              <a href="${entry.url}" target="_blank" rel="noreferrer">${escapePreviewHtml(entry.label)}</a>
+              <span>Batch ${index + 1}</span>
+            </li>
+          `
+        )
+        .join('')
+    : '<li><span>Preparing the first batch…</span></li>';
+
+  return `<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Packet previews</title>
+    <style>
+      :root {
+        color-scheme: light;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      }
+      body {
+        margin: 0;
+        padding: 24px;
+        background: #f7f3ed;
+        color: #1f2f2a;
+      }
+      main {
+        max-width: 760px;
+        margin: 0 auto;
+        padding: 24px;
+        border-radius: 20px;
+        background: rgba(255, 255, 255, 0.92);
+        border: 1px solid rgba(37, 73, 66, 0.12);
+      }
+      h1 {
+        margin: 0 0 12px;
+        font-size: 1.5rem;
+      }
+      p {
+        margin: 0 0 12px;
+        line-height: 1.5;
+      }
+      ul {
+        margin: 20px 0 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 12px;
+      }
+      li {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+        padding: 14px 16px;
+        border-radius: 16px;
+        background: #fffaf5;
+        border: 1px solid rgba(37, 73, 66, 0.12);
+      }
+      a {
+        color: #244942;
+        font-weight: 600;
+        text-decoration: none;
+      }
+      span {
+        color: #5d6663;
+        font-size: 0.95rem;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Packet previews are ready</h1>
+      <p>Prepared ${readyCount} of ${totalBatches} batch${totalBatches === 1 ? '' : 'es'}.</p>
+      <p>Open a batch, then use Share or Print on your device to save it as PDF.</p>
+      <ul>${links}</ul>
+    </main>
+  </body>
+</html>`;
+}
+
+function updateVisiblePreviewWindow(previewWindow, entries, { totalBatches }) {
+  if (!previewWindow || previewWindow.closed) {
+    return false;
+  }
+
+  const doc = previewWindow.document;
+  if (!doc) {
+    return false;
+  }
+
+  doc.open();
+  doc.write(
+    renderVisiblePreviewIndex(entries, {
+      readyCount: entries.length,
+      totalBatches,
+    })
+  );
+  doc.close();
+  return true;
+}
+
 async function waitForFrameLoad(frame, url) {
   await new Promise((resolve, reject) => {
     const cleanup = () => {
@@ -913,12 +1051,18 @@ export async function previewBrowserExport(input) {
   };
 }
 
-export async function runBrowserExport(input, { onProgress, printFrame = null } = {}) {
+export async function runBrowserExport(
+  input,
+  { onProgress, printFrame = null, visiblePreviewWindow = null } = {}
+) {
   const prepared = await prepareExport(input, { onProgress });
   const savedFiles = [];
+  const previewEntries = [];
   let openedPreviewCount = 0;
   let fallbackDownloadCount = 0;
   const renderOptions = resolveBrowserRenderOptions(prepared.config);
+  const preferVisiblePreview =
+    shouldPreferVisiblePreviewWindow(typeof navigator === 'object' ? navigator : {}) && !printFrame;
 
   emitProgress(onProgress, {
     state: 'running',
@@ -983,7 +1127,23 @@ export async function runBrowserExport(input, { onProgress, printFrame = null } 
       buildFilename(batchNumber, printableBatch, prepared.config.mode),
       prepared.config.outputDir
     );
-    const delivery = await openPrintablePreview(filename, html, printFrame);
+    let delivery;
+
+    if (preferVisiblePreview && visiblePreviewWindow) {
+      delivery = createPreviewEntry(filename, html);
+      previewEntries.push(delivery);
+
+      if (prepared.exportBatchCount === 1) {
+        visiblePreviewWindow.location.replace(delivery.url);
+      } else {
+        updateVisiblePreviewWindow(visiblePreviewWindow, previewEntries, {
+          totalBatches: prepared.exportBatchCount,
+        });
+      }
+    } else {
+      delivery = await openPrintablePreview(filename, html, printFrame);
+    }
+
     appendBrowserHistory(prepared.config, batch, {
       batchNumber,
       filename,
@@ -1001,6 +1161,8 @@ export async function runBrowserExport(input, { onProgress, printFrame = null } 
       message:
         delivery.delivery === 'print'
           ? `Opened the print dialog for ${filename}. Use Save as PDF.`
+          : delivery.delivery === 'preview'
+            ? `Opened ${delivery.label} in a preview tab. Use Share or Print to save it as PDF.`
           : `Popup blocked, so ${delivery.label} was downloaded instead.`,
       matchedCount: prepared.totalMatchedCount,
       exportCount: prepared.selectedCount,
@@ -1055,4 +1217,8 @@ export function __testResolveBrowserRenderOptions(config) {
 
 export function __testMapBrowserHistoryPayload(history) {
   return mapBrowserHistoryPayload(history);
+}
+
+export function __testShouldPreferVisiblePreviewWindow(environment) {
+  return shouldPreferVisiblePreviewWindow(environment);
 }

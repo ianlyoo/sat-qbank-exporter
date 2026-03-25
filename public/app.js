@@ -6,6 +6,7 @@ import {
   loadBrowserHistory,
   previewBrowserExport,
   runBrowserExport,
+  shouldPreferVisiblePreviewWindow,
 } from './browser-exporter.js';
 
 const DIFFICULTY_OPTIONS = ['Easy', 'Medium', 'Hard'];
@@ -286,6 +287,40 @@ function prepareBrowserPrintFrame() {
   return frame;
 }
 
+function openVisiblePreviewWindow() {
+  if (typeof window === 'undefined' || typeof window.open !== 'function') {
+    return null;
+  }
+
+  const previewWindow = window.open('', '_blank');
+  if (!previewWindow) {
+    return null;
+  }
+
+  previewWindow.document.write(`<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Preparing packet preview</title>
+    <style>
+      body {
+        margin: 0;
+        padding: 24px;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: #f7f3ed;
+        color: #1f2f2a;
+      }
+    </style>
+  </head>
+  <body>
+    <p>Preparing your packet preview…</p>
+  </body>
+</html>`);
+  previewWindow.document.close();
+  return previewWindow;
+}
+
 function cleanupBrowserPrintFrame(frame) {
   frame?.remove();
 }
@@ -543,22 +578,29 @@ async function startExport() {
     if (state.runtimeMode === 'browser') {
       state.jobId = '';
       clearActiveJobId();
+      const useVisiblePreviewWindow = shouldPreferVisiblePreviewWindow(
+        typeof navigator === 'object' ? navigator : {}
+      );
+      const visiblePreviewWindow = useVisiblePreviewWindow ? openVisiblePreviewWindow() : null;
       state.job = {
         state: 'running',
         phase: 'queued',
-        message: 'Preparing browser print previews…',
+        message: useVisiblePreviewWindow
+          ? 'Preparing preview tabs for mobile export…'
+          : 'Preparing browser print previews…',
         currentBatch: null,
         totalBatches: state.preview?.exportBatches ?? null,
         savedFiles: [],
-        outputDir: 'Browser print dialog',
+        outputDir: useVisiblePreviewWindow ? 'Preview tab' : 'Browser print dialog',
         error: null,
       };
       render();
-      const printFrame = prepareBrowserPrintFrame();
+      const printFrame = useVisiblePreviewWindow ? null : prepareBrowserPrintFrame();
 
       try {
         const result = await runBrowserExport(buildPayload(), {
           printFrame,
+          visiblePreviewWindow,
           onProgress(progress) {
             state.job = {
               ...state.job,
@@ -572,13 +614,15 @@ async function startExport() {
           state: 'completed',
           phase: 'completed',
           message:
-            result.fallbackDownloadCount > 0
+            result.openedPreviewCount > 0
+              ? 'Opened preview tabs for the generated batches. Use Share or Print there to save as PDF.'
+              : result.fallbackDownloadCount > 0
               ? 'The browser could not open the print dialog for some batches, so HTML files were downloaded instead.'
               : 'The print dialog is ready. Use Save as PDF to keep each packet.',
           currentBatch: result.totalBatches,
           totalBatches: result.totalBatches,
           savedFiles: result.savedFiles,
-          outputDir: result.outputDir,
+          outputDir: result.openedPreviewCount > 0 ? 'Preview tab' : result.outputDir,
           error: null,
         };
         state.previewStale = false;
