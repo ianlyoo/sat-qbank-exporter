@@ -81,17 +81,16 @@ test('selectQuestions returns bounded randomized copies', () => {
   assert.equal(input.length, 4);
 });
 
-test('buildFilename uses batch number and mode slug', () => {
-  const filename = buildFilename(
-    3,
-    [
-      { questionId: 'Q1' },
-      { questionId: 'Q9' },
-    ],
-    'teacher'
-  );
+test('buildFilename uses assessment, section, and batch number', () => {
+  const filename = buildFilename('SAT', 'Math', 3);
 
-  assert.equal(filename, '003_Q1-Q9_teacher.pdf');
+  assert.equal(filename, 'SAT_Math_Batch_3.pdf');
+});
+
+test('buildFilename shortens reading and writing to reading', () => {
+  const filename = buildFilename('SAT', 'Reading and Writing', 2);
+
+  assert.equal(filename, 'SAT_Reading_Batch_2.pdf');
 });
 
 test('createHeaderText keeps PDF titles concise', () => {

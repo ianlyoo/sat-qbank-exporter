@@ -111,10 +111,12 @@ export function applyFilters({ questions, difficultyCodes, allowedSkills, exclud
   });
 }
 
-export function buildFilename(batchNumber, batch, mode) {
-  const firstId = batch[0].questionId;
-  const lastId = batch[batch.length - 1].questionId;
-  return `${String(batchNumber).padStart(3, '0')}_${firstId}-${lastId}_${slugify(mode)}.pdf`;
+function formatFilenameSection(section) {
+  return section === 'Reading and Writing' ? 'Reading' : 'Math';
+}
+
+export function buildFilename(assessment, section, batchNumber) {
+  return `${assessment}_${formatFilenameSection(section)}_Batch_${batchNumber}.pdf`;
 }
 
 export function normalizeExportOptions(input = {}) {

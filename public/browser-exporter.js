@@ -147,10 +147,12 @@ function applyFilters({ questions, difficultyCodes, allowedSkills, excludeActive
   });
 }
 
-function buildFilename(batchNumber, batch, mode) {
-  const firstId = batch[0].questionId;
-  const lastId = batch[batch.length - 1].questionId;
-  return `${String(batchNumber).padStart(3, '0')}_${firstId}-${lastId}_${slugify(mode)}.pdf`;
+function formatFilenameSection(section) {
+  return section === 'Reading and Writing' ? 'Reading' : 'Math';
+}
+
+function buildFilename(assessment, section, batchNumber) {
+  return `${assessment}_${formatFilenameSection(section)}_Batch_${batchNumber}.pdf`;
 }
 
 function normalizeExportOptions(input = {}) {
@@ -669,14 +671,8 @@ function mapPrintableBatch(batch, detailItems, legacyItems) {
   });
 }
 
-function createOutputFilename(filename, outputDir) {
-  const sanitizedPrefix = slugify(
-    String(outputDir || '')
-      .split(/[\\/]/)
-      .filter(Boolean)
-      .pop() || 'practice-packets'
-  );
-  return sanitizedPrefix ? `${sanitizedPrefix}_${filename}` : filename;
+function createOutputFilename(filename) {
+  return filename;
 }
 
 function createHtmlFallbackFilename(filename) {
@@ -1088,8 +1084,7 @@ export async function runBrowserExport(
     });
 
     const filename = createOutputFilename(
-      buildFilename(batchNumber, printableBatch, prepared.config.mode),
-      prepared.config.outputDir
+      buildFilename(prepared.config.assessment, prepared.config.section, batchNumber)
     );
     let delivery;
 
