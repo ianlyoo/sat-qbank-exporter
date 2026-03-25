@@ -129,6 +129,13 @@ export async function prepareExport(input, { onProgress } = {}) {
 }
 
 function mapPrintableBatch(batch, detailItems, legacyItems) {
+  function mergePrintableHtml(...segments) {
+    return segments
+      .map((segment) => String(segment || '').trim())
+      .filter(Boolean)
+      .join('\n');
+  }
+
   const detailByExternalId = new Map(detailItems.map((item) => [item.externalid, item]));
   const legacyByItemId = new Map(legacyItems.map((item) => [item.item_id, item]));
 
@@ -149,8 +156,8 @@ function mapPrintableBatch(batch, detailItems, legacyItems) {
         domain: item.primary_class_cd_desc,
         skill: item.skill_desc,
         difficultyLabel: difficultyLabel(item.difficulty),
-        prompt: detail.stimulus,
-        stem: detail.stem,
+        prompt: mergePrintableHtml(detail.stimulus),
+        stem: mergePrintableHtml(detail.stem),
         answerOptions,
         correctAnswer: detail.correct_answer || [],
         rationale: detail.rationale,
@@ -167,13 +174,17 @@ function mapPrintableBatch(batch, detailItems, legacyItems) {
       domain: item.primary_class_cd_desc,
       skill: item.skill_desc,
       difficultyLabel: difficultyLabel(item.difficulty),
-      prompt: legacy.prompt || '',
-      stem: legacy.stem || '',
+      prompt: mergePrintableHtml(legacy.body, legacy.prompt),
+      stem: mergePrintableHtml(legacy.stem),
       answerOptions: normalizeLegacyAnswerOptions(legacy.answer),
       correctAnswer: normalizeLegacyCorrectAnswer(legacy.answer),
       rationale: legacy.answer?.rationale || '',
     };
   });
+}
+
+export function __testMapPrintableBatch(batch, detailItems, legacyItems) {
+  return mapPrintableBatch(batch, detailItems, legacyItems);
 }
 
 export async function previewExport(input, { onProgress } = {}) {

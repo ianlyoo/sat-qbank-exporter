@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { EXPORT_MODES } from '../src/core/constants.mjs';
+import { __testMapPrintableBatch } from '../src/core/exporter.mjs';
 import {
   applyFilters,
   buildFilename,
@@ -138,6 +139,32 @@ test('renderDocumentHtml includes teacher answer block only in teacher mode', ()
   assert.match(teacherHtml, /Correct Answer/);
   assert.doesNotMatch(cleanHtml, /Correct Answer/);
   assert.doesNotMatch(cleanHtml, /Question Q1/);
+});
+
+test('core printable mapping keeps legacy body content ahead of the prompt', () => {
+  const [mapped] = __testMapPrintableBatch(
+    [
+      {
+        questionId: '4f669597',
+        primary_class_cd_desc: 'Algebra',
+        skill_desc: 'Linear equations in one variable',
+        difficulty: 'M',
+        ibn: '070610-DC',
+      },
+    ],
+    [],
+    [
+      {
+        item_id: '070610-DC',
+        body: '<p>Equation block</p>',
+        prompt: '<p>Question text</p>',
+        answer: {},
+      },
+    ]
+  );
+
+  assert.match(mapped.prompt, /^<p>Equation block<\/p>\s*<p>Question text<\/p>$/);
+  assert.equal(mapped.stem, '');
 });
 
 test('renderDocumentHtml includes fixed page layout scaffolding', () => {

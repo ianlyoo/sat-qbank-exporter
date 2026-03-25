@@ -3,6 +3,7 @@ import test from 'node:test';
 
 import {
   __testMapBrowserHistoryPayload,
+  __testMapPrintableBatch,
   __testResolveBrowserRenderOptions,
   __testShouldPreferVisiblePreviewWindow,
 } from '../public/browser-exporter.js';
@@ -49,6 +50,32 @@ test('browser history payload exposes question counts for the UI modal', () => {
       batches: [{ id: 'batch-1' }, { id: 'batch-2' }],
     }
   );
+});
+
+test('browser printable mapping keeps legacy body content ahead of the prompt', () => {
+  const [mapped] = __testMapPrintableBatch(
+    [
+      {
+        questionId: '4f669597',
+        primary_class_cd_desc: 'Algebra',
+        skill_desc: 'Linear equations in one variable',
+        difficulty: 'M',
+        ibn: '070610-DC',
+      },
+    ],
+    [],
+    [
+      {
+        item_id: '070610-DC',
+        body: '<p>Equation block</p>',
+        prompt: '<p>Question text</p>',
+        answer: {},
+      },
+    ]
+  );
+
+  assert.match(mapped.prompt, /^<p>Equation block<\/p>\s*<p>Question text<\/p>$/);
+  assert.equal(mapped.stem, '');
 });
 
 test('mobile and ipad-like environments prefer visible preview tabs', () => {
