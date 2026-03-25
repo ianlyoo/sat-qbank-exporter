@@ -91,10 +91,10 @@ test('mode options use the updated labels and expose the answer key toggle', asy
 
   assert.match(html, /<strong>Default<\/strong>/);
   assert.match(html, /<strong>Clean<\/strong>/);
-  assert.match(html, /<strong>Answer key included<\/strong>/);
+  assert.match(html, /<strong>Add Key<\/strong>/);
   assert.match(html, /Questions only\./);
   assert.match(html, /Minimal print layout\./);
-  assert.match(html, /Add an answer key and rationale appendix after the questions\./);
+  assert.match(html, /Add an answer key after the questions\./);
   assert.doesNotMatch(html, /Output directory/);
   assert.doesNotMatch(html, /id="output-dir"/);
   assert.match(html, /id="include-answer-key"/);
