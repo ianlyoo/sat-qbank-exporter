@@ -1295,21 +1295,40 @@ input[type="text"]:focus {
 .preview-history-controls {
   display: flex;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   gap: var(--space-2);
   flex-wrap: wrap;
+}
+
+.preview-settings-slot {
+  align-self: end;
+}
+
+.preview-settings-slot dd {
+  min-height: 1.75rem;
 }
 
 .mini-toggle {
   display: inline-flex;
   align-items: center;
   gap: 0.55rem;
-  margin-left: auto;
   color: var(--color-muted);
   font-size: 0.72rem;
   font-weight: 600;
   cursor: pointer;
   user-select: none;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
 }
 
 .mini-toggle input {
