@@ -586,7 +586,7 @@ async function startExport() {
         state: 'running',
         phase: 'queued',
         message: useVisiblePreviewWindow
-          ? 'Preparing preview tabs for mobile export…'
+          ? 'Preparing mobile PDF previews…'
           : 'Preparing browser print previews…',
         currentBatch: null,
         totalBatches: state.preview?.exportBatches ?? null,
@@ -595,11 +595,13 @@ async function startExport() {
         error: null,
       };
       render();
-      const printFrame = useVisiblePreviewWindow ? null : prepareBrowserPrintFrame();
+      const browserFrame = prepareBrowserPrintFrame();
+      const printFrame = useVisiblePreviewWindow ? null : browserFrame;
 
       try {
         const result = await runBrowserExport(buildPayload(), {
           printFrame,
+          renderFrame: browserFrame,
           visiblePreviewWindow,
           onProgress(progress) {
             state.job = {
@@ -615,7 +617,7 @@ async function startExport() {
           phase: 'completed',
           message:
             result.openedPreviewCount > 0
-              ? 'Opened preview tabs for the generated batches. Use Share or Print there to save as PDF.'
+              ? 'Opened generated batch PDFs in preview tabs. Use Share or Save to Files there.'
               : result.fallbackDownloadCount > 0
               ? 'The browser could not open the print dialog for some batches, so HTML files were downloaded instead.'
               : 'The print dialog is ready. Use Save as PDF to keep each packet.',
@@ -629,7 +631,7 @@ async function startExport() {
         render();
         return;
       } finally {
-        cleanupBrowserPrintFrame(printFrame);
+        cleanupBrowserPrintFrame(browserFrame);
       }
     }
 

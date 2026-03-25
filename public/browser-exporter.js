@@ -17,6 +17,7 @@ const EXPORT_HISTORY_STORAGE_KEY = 'sat-exporter-browser-history-v2';
 const EXPORT_HISTORY_VERSION = 2;
 
 let lookupCache = null;
+let mobilePdfModulesPromise = null;
 
 export function shouldPreferVisiblePreviewWindow(environment = {}) {
   const userAgent = String(environment.userAgent || '');
@@ -694,13 +695,12 @@ function downloadTextFile(filename, contents) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
-function createPreviewEntry(filename, contents) {
-  const previewFilename = createHtmlFallbackFilename(filename);
-  const blob = new Blob([contents], { type: 'text/html;charset=utf-8' });
+function createPreviewEntry(filename, blob, type = 'text/html') {
   return {
     delivery: 'preview',
-    label: previewFilename,
+    label: filename,
     url: URL.createObjectURL(blob),
+    type,
   };
 }
 
@@ -713,6 +713,8 @@ function escapePreviewHtml(value) {
 }
 
 function renderVisiblePreviewIndex(entries, { readyCount, totalBatches }) {
+  const resourceLabel =
+    entries.some((entry) => entry.type === 'application/pdf') ? 'PDF' : 'preview';
   const links = entries.length
     ? entries
         .map(
@@ -790,9 +792,13 @@ function renderVisiblePreviewIndex(entries, { readyCount, totalBatches }) {
   </head>
   <body>
     <main>
-      <h1>Packet previews are ready</h1>
+      <h1>Packet ${resourceLabel === 'PDF' ? 'PDFs' : 'previews'} are ready</h1>
       <p>Prepared ${readyCount} of ${totalBatches} batch${totalBatches === 1 ? '' : 'es'}.</p>
-      <p>Open a batch, then use Share or Print on your device to save it as PDF.</p>
+      <p>${
+        resourceLabel === 'PDF'
+          ? 'Open a batch PDF, then use Share or Save to Files on your device.'
+          : 'Open a batch, then use Share or Print on your device to save it as PDF.'
+      }</p>
       <ul>${links}</ul>
     </main>
   </body>
@@ -926,6 +932,79 @@ async function openPrintablePreview(filename, contents, printFrame) {
   };
 }
 
+async function loadMobilePdfModules() {
+  if (!mobilePdfModulesPromise) {
+    mobilePdfModulesPromise = Promise.all([
+      import('https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/+esm'),
+      import('https://cdn.jsdelivr.net/npm/jspdf@2.5.1/+esm'),
+    ]).then(([html2canvasModule, jsPdfModule]) => ({
+      html2canvas: html2canvasModule.default || html2canvasModule,
+      jsPDF:
+        jsPdfModule.jsPDF ||
+        jsPdfModule.default?.jsPDF ||
+        jsPdfModule.default,
+    }));
+  }
+
+  return mobilePdfModulesPromise;
+}
+
+async function renderPdfPreview(filename, contents, renderFrame) {
+  if (!renderFrame) {
+    throw new Error('Browser render frame is unavailable.');
+  }
+
+  const { html2canvas, jsPDF } = await loadMobilePdfModules();
+  const htmlBlob = new Blob([contents], { type: 'text/html;charset=utf-8' });
+  const htmlUrl = URL.createObjectURL(htmlBlob);
+
+  try {
+    await waitForFrameLoad(renderFrame, htmlUrl);
+    await waitForFrameLayout(renderFrame);
+
+    const frameDocument = renderFrame.contentDocument;
+    const pageNodes = Array.from(frameDocument?.querySelectorAll('.print-page') || []);
+
+    if (!pageNodes.length) {
+      throw new Error('No printable pages were rendered for PDF export.');
+    }
+
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'pt',
+      format: 'a4',
+      compress: true,
+    });
+    const pageWidth = pdf.internal.pageSize.getWidth();
+    const pageHeight = pdf.internal.pageSize.getHeight();
+
+    for (let index = 0; index < pageNodes.length; index += 1) {
+      const pageNode = pageNodes[index];
+      const canvas = await html2canvas(pageNode, {
+        backgroundColor: '#ffffff',
+        useCORS: true,
+        logging: false,
+        scale: 2,
+        windowWidth: Math.ceil(pageNode.scrollWidth),
+        windowHeight: Math.ceil(pageNode.scrollHeight),
+      });
+      const imageData = canvas.toDataURL('image/jpeg', 0.92);
+
+      if (index > 0) {
+        pdf.addPage('a4', 'portrait');
+      }
+
+      pdf.addImage(imageData, 'JPEG', 0, 0, pageWidth, pageHeight, undefined, 'FAST');
+    }
+
+    const pdfBlob = pdf.output('blob');
+    return createPreviewEntry(filename, pdfBlob, 'application/pdf');
+  } finally {
+    window.setTimeout(() => URL.revokeObjectURL(htmlUrl), 60_000);
+    renderFrame.removeAttribute('src');
+  }
+}
+
 function resolveBrowserRenderOptions(config) {
   if (config.mode === EXPORT_MODES.teacher) {
     return {
@@ -1053,7 +1132,7 @@ export async function previewBrowserExport(input) {
 
 export async function runBrowserExport(
   input,
-  { onProgress, printFrame = null, visiblePreviewWindow = null } = {}
+  { onProgress, printFrame = null, renderFrame = null, visiblePreviewWindow = null } = {}
 ) {
   const prepared = await prepareExport(input, { onProgress });
   const savedFiles = [];
@@ -1130,15 +1209,32 @@ export async function runBrowserExport(
     let delivery;
 
     if (preferVisiblePreview && visiblePreviewWindow) {
-      delivery = createPreviewEntry(filename, html);
-      previewEntries.push(delivery);
+      try {
+        delivery = await renderPdfPreview(filename, html, renderFrame);
+        previewEntries.push(delivery);
 
-      if (prepared.exportBatchCount === 1) {
-        visiblePreviewWindow.location.replace(delivery.url);
-      } else {
-        updateVisiblePreviewWindow(visiblePreviewWindow, previewEntries, {
-          totalBatches: prepared.exportBatchCount,
-        });
+        if (prepared.exportBatchCount === 1) {
+          visiblePreviewWindow.location.replace(delivery.url);
+        } else {
+          updateVisiblePreviewWindow(visiblePreviewWindow, previewEntries, {
+            totalBatches: prepared.exportBatchCount,
+          });
+        }
+      } catch {
+        const htmlDelivery = createPreviewEntry(
+          createHtmlFallbackFilename(filename),
+          new Blob([html], { type: 'text/html;charset=utf-8' })
+        );
+        delivery = htmlDelivery;
+        previewEntries.push(delivery);
+
+        if (prepared.exportBatchCount === 1) {
+          visiblePreviewWindow.location.replace(delivery.url);
+        } else {
+          updateVisiblePreviewWindow(visiblePreviewWindow, previewEntries, {
+            totalBatches: prepared.exportBatchCount,
+          });
+        }
       }
     } else {
       delivery = await openPrintablePreview(filename, html, printFrame);
@@ -1161,6 +1257,8 @@ export async function runBrowserExport(
       message:
         delivery.delivery === 'print'
           ? `Opened the print dialog for ${filename}. Use Save as PDF.`
+          : delivery.delivery === 'preview' && delivery.type === 'application/pdf'
+            ? `Opened ${delivery.label} as a PDF preview. Use Share or Save to Files.`
           : delivery.delivery === 'preview'
             ? `Opened ${delivery.label} in a preview tab. Use Share or Print to save it as PDF.`
           : `Popup blocked, so ${delivery.label} was downloaded instead.`,
