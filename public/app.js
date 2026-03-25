@@ -60,6 +60,7 @@ const state = {
     outputDir: './output',
     shuffle: true,
     excludeExported: false,
+    autoDownloadPdf: false,
   },
 };
 
@@ -95,6 +96,7 @@ function cacheDom() {
   dom.includeAnswerKey = document.getElementById('include-answer-key');
   dom.shuffle = document.getElementById('shuffle');
   dom.excludeExported = document.getElementById('exclude-exported');
+  dom.autoDownloadPdf = document.getElementById('auto-download-pdf');
   dom.previewButton = document.getElementById('preview-button');
   dom.exportButton = document.getElementById('export-button');
   dom.clearHistoryButton = document.getElementById('clear-history-button');
@@ -163,6 +165,10 @@ function bindEvents() {
 
   dom.excludeExported.addEventListener('change', (event) => {
     updateForm({ excludeExported: event.target.checked });
+  });
+
+  dom.autoDownloadPdf.addEventListener('change', (event) => {
+    updateForm({ autoDownloadPdf: event.target.checked });
   });
 
   document.querySelectorAll('input[name="mode"]').forEach((input) => {
@@ -390,6 +396,7 @@ function createFormFromDefaults(defaults, lookup) {
       outputDir: defaults?.outputDir || './output',
       shuffle: Boolean(defaults?.shuffle ?? true),
       excludeExported: Boolean(defaults?.excludeExported ?? false),
+      autoDownloadPdf: Boolean(defaults?.autoDownloadPdf ?? false),
     },
     { autoChooseDomain: true }
   );
@@ -461,6 +468,7 @@ function doesPreviewMatchForm(preview, form) {
     'outputDir',
     'shuffle',
     'excludeExported',
+    'autoDownloadPdf',
   ];
 
   return fields.every((field) => {
@@ -907,6 +915,7 @@ function buildPayload() {
     shuffle: state.form.shuffle,
     excludeActive: false,
     excludeExported: state.form.excludeExported,
+    autoDownloadPdf: state.form.autoDownloadPdf,
   };
 }
 
@@ -1095,6 +1104,7 @@ function renderInputs() {
   dom.includeAnswerKey.checked = state.form.includeAnswerKey;
   dom.shuffle.checked = state.form.shuffle;
   dom.excludeExported.checked = state.form.excludeExported;
+  dom.autoDownloadPdf.checked = state.form.autoDownloadPdf;
 
   document.querySelectorAll('input[name="mode"]').forEach((input) => {
     input.checked = input.value === state.form.mode;
@@ -1106,6 +1116,7 @@ function renderInputs() {
   dom.includeAnswerKey.disabled = disabled;
   dom.shuffle.disabled = disabled;
   dom.excludeExported.disabled = disabled;
+  dom.autoDownloadPdf.disabled = disabled;
   document.querySelectorAll('input[name="mode"]').forEach((input) => {
     input.disabled = disabled;
   });

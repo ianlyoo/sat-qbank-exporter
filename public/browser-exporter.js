@@ -173,6 +173,7 @@ function normalizeExportOptions(input = {}) {
     excludeActive: parseBoolean(merged.excludeActive, DEFAULT_EXPORT_OPTIONS.excludeActive),
     excludeExported: parseBoolean(merged.excludeExported, DEFAULT_EXPORT_OPTIONS.excludeExported),
     shuffle: parseBoolean(merged.shuffle, DEFAULT_EXPORT_OPTIONS.shuffle),
+    autoDownloadPdf: parseBoolean(merged.autoDownloadPdf, DEFAULT_EXPORT_OPTIONS.autoDownloadPdf),
     fromPage: parseInteger(merged.fromPage, DEFAULT_EXPORT_OPTIONS.fromPage),
     toPage:
       merged.toPage === null || merged.toPage === undefined || merged.toPage === ''
@@ -695,11 +696,23 @@ function downloadTextFile(filename, contents) {
   window.setTimeout(() => URL.revokeObjectURL(url), 1000);
 }
 
+function downloadBlobFile(filename, blob) {
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+}
+
 function createPreviewEntry(filename, blob, type = 'text/html') {
   return {
     delivery: 'preview',
     label: filename,
     url: URL.createObjectURL(blob),
+    blob,
     type,
   };
 }
@@ -1213,6 +1226,10 @@ export async function runBrowserExport(
         delivery = await renderPdfPreview(filename, html, renderFrame);
         previewEntries.push(delivery);
 
+        if (prepared.config.autoDownloadPdf && delivery.type === 'application/pdf') {
+          downloadBlobFile(delivery.label, delivery.blob);
+        }
+
         if (prepared.exportBatchCount === 1) {
           visiblePreviewWindow.location.replace(delivery.url);
         } else {
@@ -1257,6 +1274,10 @@ export async function runBrowserExport(
       message:
         delivery.delivery === 'print'
           ? `Opened the print dialog for ${filename}. Use Save as PDF.`
+          : delivery.delivery === 'preview' &&
+              delivery.type === 'application/pdf' &&
+              prepared.config.autoDownloadPdf
+            ? `Started downloading ${delivery.label}. If your browser blocks it, use the opened PDF preview.`
           : delivery.delivery === 'preview' && delivery.type === 'application/pdf'
             ? `Opened ${delivery.label} as a PDF preview. Use Share or Save to Files.`
           : delivery.delivery === 'preview'
