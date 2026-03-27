@@ -463,6 +463,40 @@ export function renderDocumentHtml({ batch, mode, includeAnswerKey = false, head
             margin: 10px 0;
           }
 
+          .question-block table,
+          .teacher-content table,
+          .choice-content table {
+            width: 100%;
+            max-width: 100%;
+            margin: 10px 0;
+            border-collapse: collapse;
+            table-layout: fixed;
+            font-size: 10px;
+          }
+
+          .question-block th,
+          .question-block td,
+          .teacher-content th,
+          .teacher-content td,
+          .choice-content th,
+          .choice-content td {
+            border: 0.6px solid #dfd8cd;
+            padding: 4px 6px;
+            vertical-align: top;
+            text-align: left;
+            overflow-wrap: anywhere;
+          }
+
+          .question-block ul,
+          .question-block ol,
+          .teacher-content ul,
+          .teacher-content ol,
+          .choice-content ul,
+          .choice-content ol {
+            margin: 8px 0;
+            padding-left: 18px;
+          }
+
           .question-block svg,
           .teacher-content svg,
           .choice-content svg,
