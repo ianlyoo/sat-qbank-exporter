@@ -781,6 +781,47 @@ export function renderDocumentHtml({ batch, mode, includeAnswerKey = false, head
               return page.scrollHeight - page.clientHeight <= tolerance;
             }
 
+            function createMathOperator(value) {
+              const operator = document.createElementNS('http://www.w3.org/1998/Math/MathML', 'mo');
+              operator.textContent = value;
+              return operator;
+            }
+
+            function expandMfencedElements(root = document) {
+              const mfencedNodes = Array.from(root.querySelectorAll('mfenced')).reverse();
+
+              mfencedNodes.forEach((node) => {
+                const fragment = document.createDocumentFragment();
+                const open = node.getAttribute('open') ?? '(';
+                const close = node.getAttribute('close') ?? ')';
+                const separators = (node.getAttribute('separators') ?? ',')
+                  .split('')
+                  .filter((value) => value.trim().length > 0);
+                const children = Array.from(node.childNodes);
+
+                if (open) {
+                  fragment.appendChild(createMathOperator(open));
+                }
+
+                children.forEach((child, index) => {
+                  if (index > 0) {
+                    const separator = separators[Math.min(index - 1, separators.length - 1)] ?? ',';
+                    if (separator) {
+                      fragment.appendChild(createMathOperator(separator));
+                    }
+                  }
+
+                  fragment.appendChild(child);
+                });
+
+                if (close) {
+                  fragment.appendChild(createMathOperator(close));
+                }
+
+                node.replaceWith(fragment);
+              });
+            }
+
             async function waitForAssets() {
               if (document.fonts && document.fonts.ready) {
                 await document.fonts.ready;
@@ -802,6 +843,7 @@ export function renderDocumentHtml({ batch, mode, includeAnswerKey = false, head
             }
 
             async function buildLayout() {
+              expandMfencedElements();
               await waitForAssets();
 
               const pagesRoot = document.getElementById('pages-root');

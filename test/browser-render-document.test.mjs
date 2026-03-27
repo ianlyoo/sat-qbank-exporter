@@ -27,6 +27,8 @@ test('browser render document module builds printable packet html', () => {
   assert.match(html, /Question Q1/);
   assert.match(html, /Skills/);
   assert.match(html, /Linear functions/);
+  assert.match(html, /querySelectorAll\('mfenced'\)/);
+  assert.match(html, /expandMfencedElements\(\);/);
   assert.match(html, /__SAT_PDF_LAYOUT_DONE__/);
 });
 
