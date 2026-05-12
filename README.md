@@ -1,6 +1,6 @@
 # SAT Question Bank Exporter
 
-An unofficial local-first SAT question bank exporter with a desktop-friendly web UI and a CLI fallback.
+An unofficial SAT question bank exporter with a desktop-friendly local UI, a CLI fallback, and hosted frontend/worker deployment support.
 
 It lets you choose an assessment, section, domains, skills, difficulty, question count, batching rules, and export polished PDF practice sets from your own machine.
 
@@ -15,7 +15,8 @@ It lets you choose an assessment, section, domains, skills, difficulty, question
 
 ## What This Project Is
 
-- Local-only: nothing is hosted and no account is required
+- Canonical repo: this repository now includes the local app, CLI, Vercel frontend setup, and Render worker setup
+- Local-first by default: no account is required for local use
 - Unofficial: this is not affiliated with College Board
 - Practical: built for students/educators who want printable practice packets quickly
 
@@ -113,7 +114,7 @@ npm test
 
 ## Hosted Architecture In Progress
 
-This repository now supports a split deployment model for hosted use:
+This repository supports a split deployment model for hosted use:
 
 - `npm start` runs the web app server
 - `npm run start:worker` runs a dedicated export worker
@@ -180,4 +181,4 @@ Persistent storage notes:
 
 - Use this project within College Board terms and your local copyright boundaries.
 - API behavior may change if the upstream question bank changes.
-- This repository is designed for local use, not as a hosted service.
+- Local use remains the simplest path; hosted deployment is supported through the Vercel frontend and separate Node worker setup described above.
