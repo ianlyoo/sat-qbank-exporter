@@ -1,0 +1,36 @@
+# This file is for citation metadata — https://citation-file-format.github.io/
+cff-version: 1.2.0
+message: "If you use sat-qbank-exporter, please cite it as below."
+title: "sat-qbank-exporter"
+abstract: "Local-first SAT question bank exporter — generate PDFs via CLI with Vercel frontend and Render worker in offline-capable workflows."
+version: 0.1.0
+date-released: 2026-08-26
+license: MIT
+type: software
+authors:
+  - family-names: "Yoo"
+    given-names: "Ian"
+    alias: "ianlyoo"
+repository-code: "https://github.com/ianlyoo/sat-qbank-exporter"
+url: "https://github.com/ianlyoo/sat-qbank-exporter"
+homepage: "https://ianlyoo.github.io/sat-qbank-exporter/"
+keywords:
+  - cli-tool
+  - developer-tools
+  - education
+  - exporter
+  - local-first
+  - nodejs
+  - pdf-generation
+  - playwright
+  - question-bank
+  - render
+  - sat
+  - vercel
+identifiers:
+  - type: url
+    value: "https://github.com/ianlyoo/sat-qbank-exporter"
+    description: "GitHub repository"
+  - type: url
+    value: "https://ianlyoo.github.io/sat-qbank-exporter/"
+    description: "GitHub Pages"

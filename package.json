@@ -1,15 +1,40 @@
 {
   "name": "sat-qbank-exporter",
-  "private": true,
   "version": "0.1.0",
+  "description": "Local-first SAT question bank exporter — generate PDFs via CLI with Vercel frontend and Render worker in offline-capable workflows.",
   "type": "module",
+  "license": "MIT",
+  "author": "ianlyoo",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ianlyoo/sat-qbank-exporter.git"
+  },
+  "homepage": "https://github.com/ianlyoo/sat-qbank-exporter",
+  "bugs": {
+    "url": "https://github.com/ianlyoo/sat-qbank-exporter/issues"
+  },
+  "keywords": [
+    "cli-tool",
+    "developer-tools",
+    "education",
+    "exporter",
+    "local-first",
+    "nodejs",
+    "pdf-generation",
+    "playwright",
+    "question-bank",
+    "render",
+    "sat",
+    "vercel"
+  ],
   "scripts": {
     "export": "node batch_export.mjs",
     "launch": "node scripts/launch.mjs",
     "package:release": "node scripts/package-release.mjs",
     "start": "node server.mjs",
     "start:worker": "node worker.mjs",
-    "test": "node --test"
+    "test": "node --test",
+    "social-preview:build": "node scripts/build-social-preview.mjs"
   },
   "dependencies": {
     "playwright": "^1.58.2"

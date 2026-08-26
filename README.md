@@ -1,140 +1,128 @@
-# SAT Question Bank Exporter
+# sat-qbank-exporter
 
-> College Board 문제은행에서 인쇄용 SAT 연습 세트를 뽑아내는 비공식 익스포터
+Local-first SAT question bank exporter — generate PDFs via CLI with Vercel frontend and Render worker in offline-capable workflows.
 
-[English](README.en.md) · [MIT License](LICENSE) · Node.js 20+
+[한국어](README.ko.md)
 
-College Board 문제은행은 온라인으로 풀게만 되어 있어, 종이로 뽑아 풀거나 배포하기가
-번거롭다. 이 툴은 assessment·섹션·도메인·스킬·난이도·문항 수·배치 규칙을 골라
-**깔끔한 PDF 연습 세트를 내 기기에서 렌더링**한다.
+[![CI](https://github.com/ianlyoo/sat-qbank-exporter/actions/workflows/ci.yml/badge.svg)](https://github.com/ianlyoo/sat-qbank-exporter/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+[![Release: v0.1.0](https://img.shields.io/github/v/release/ianlyoo/sat-qbank-exporter?label=v0.1.0)](https://github.com/ianlyoo/sat-qbank-exporter/releases/tag/v0.1.0)
+[![Pages](https://img.shields.io/badge/Pages-GitHub_Pages-2ea44f)](https://ianlyoo.github.io/sat-qbank-exporter/)
 
-**로컬 우선이다 — 계정도, 호스팅도 없이 내 기기에서 돈다.** 원하면 Vercel 프론트 +
-Render 워커로 호스팅하는 선택 경로가 따로 있다.
+Turn the College Board question bank into printable SAT practice sets. Pick assessment, section, domains, skills, difficulty, question count and batching rules, then render polished PDFs on your own machine. Local-first by default — no account, no hosting. An optional hosted path (Vercel frontend + Render worker) exists.
 
-College Board 공식 프로젝트가 아니다.
+- Node.js 20+, Playwright Chromium PDF render
+- Web UI + CLI (`batch_export.mjs`) — student / teacher / clean batches
+- Double-click launcher — `launch.bat` (Windows) / `launch.command` (macOS)
 
-## 아키텍처
+## Quick start — local-first pdf-generation with nodejs and cli-tool
 
-```mermaid
-flowchart LR
-    A[College Board<br/>문제은행] --> B[익스포터]
-    B --> C{실행 형태}
-    C -- "로컬 (기본)" --> D[웹 UI + CLI<br/>Playwright PDF 렌더]
-    C -- "호스팅 (선택)" --> E[Vercel 프론트]
-    E --> F[Render 워커<br/>Playwright + 영구 디스크]
-    D --> G[PDF 배치]
-    F --> G
-```
+This quick start uses the nodejs CLI-tool for local-first pdf-generation, including question-bank export and playwright rendering.
 
-## 빠른 시작
-
-릴리스 빌드나 로컬 zip 사본이라면 런처를 더블클릭한다.
-
-- Windows: [`launch.bat`](./launch.bat)
-- macOS: [`launch.command`](./launch.command)
-
-런처는 Node.js 설치 여부를 확인하고, 의존성·Playwright Chromium이 준비되지 않았으면
-최초 1회 세팅을 자동 실행한 뒤 로컬 서버를 띄우고 브라우저에서 `http://localhost:4173`을
-연다. PDF는 기본적으로 프로젝트의 `output/` 폴더에 저장된다.
-
-런처 없이 직접 실행하려면:
+### Install from GitHub Release tarball (no npm registry)
 
 ```bash
+gh release download v0.1.0 --repo ianlyoo/sat-qbank-exporter --pattern "sat-qbank-exporter-*.tgz"
+npm install ./sat-qbank-exporter-0.1.0.tgz
+```
+
+When `gh` is unavailable — build the tarball locally:
+
+```bash
+npm pack
+npm install ./sat-qbank-exporter-0.1.0.tgz
+```
+
+### Clone, install, and run
+
+```bash
+git clone https://github.com/ianlyoo/sat-qbank-exporter.git
+cd sat-qbank-exporter
 npm install
 node node_modules/playwright/cli.js install chromium
 npm start
+# open http://localhost:4173
 ```
 
-## 기능
+Launcher double-click also works: `launch.bat` (Windows) or `launch.command` (macOS). PDFs are stored in `output/` by default.
 
-| 기능 | 설명 |
-|------|------|
-| Lookup 로딩 | College Board 문제은행에서 SAT Suite lookup 데이터를 불러옴 |
-| 필터 | 섹션·도메인·스킬·난이도로 문항 필터링 |
-| 미리보기 | 내보내기 전에 매칭되는 문항 수를 확인 |
-| PDF 렌더 | Playwright로 student/teacher/clean 배치를 로컬 렌더 |
-| 답지 첨부 | 각 배치 뒤에 답과 해설 섹션을 선택적으로 추가 |
-| 중복 제외 | 이 기기에서 이미 내보낸 문항을 건너뜀 |
+## Use cases for education and question-bank with exporter
 
-## CLI
+Education workflows where printable SAT sets are needed offline — tutoring centers, classrooms, or personal study where hosting is not required and local-first control is preferred.
 
-웹 UI가 권장 방식이지만 CLI도 동작한다.
+- Filter by section, domain, skill, difficulty, question count and batch size
+- Preview matching counts before export
+- Render student/teacher/clean batches with optional answer key and local history deduplication
 
-```bash
-npm run export -- \
-  --assessment "SAT" \
-  --section "Math" \
-  --domains "Algebra" \
-  --skills "Linear functions" \
-  --difficulty "Easy,Medium" \
-  --question-count 20 \
-  --chunk-size 10 \
-  --mode student \
-  --output ./output/math
+Not an official College Board project. Use within the source terms and local copyright scope.
+
+## Architecture: vercel frontend and render worker with playwright
+
+```mermaid
+flowchart LR
+  A[College Board question bank] --> B[Exporter]
+  B --> C{Run shape}
+  C -- "Local (default)" --> D[Web UI + CLI<br/>Playwright PDF render]
+  C -- "Hosted (optional)" --> E[Vercel frontend]
+  E --> F[Render worker<br/>Playwright + persistent disk]
+  D --> G[PDF batches]
+  F --> G
 ```
 
-| 옵션 | 설명 |
-|------|------|
-| `--question-count 20` | 총 내보낼 문항 수 |
-| `--chunk-size 10` | PDF 파일당 문항 수 |
-| `--difficulty "Easy,Medium"` | 난이도 필터 |
-| `--skills "Linear functions,Inferences"` | 스킬 필터 |
-| `--include-answer-key true` | 배치마다 답지·해설 섹션 첨부 |
-| `--exclude-active true` | active/live 문항 제외 |
-| `--exclude-exported true` | 이미 내보낸 문항 제외 |
-| `--preview` | 렌더링 없이 문항 수만 표시 |
-
-### 출력 모드
-
-| 모드 | 내용 |
-|------|------|
-| `student` | 문제만 |
-| `teacher` | 답과 해설 포함 |
-| `clean` | 최소 서식·헤더 |
-
-### 로컬 내보내기 히스토리
-
-`이미 내보낸 문항 건너뛰기`(UI) 또는 `--exclude-exported true`(CLI)를 쓰면 로컬 캐시
-`.sat-exporter/export-history.json`을 참조한다. 이 파일은 내 기기에서만 쓰이며 커밋 대상이 아니다.
-
-## 설정 레퍼런스
-
-로컬 올인원 실행에는 환경변수가 필요 없다. 아래는 호스팅 분리 배포용이다.
-
-| 환경변수 | 설명 |
+| Run shape | Path |
 |---|---|
-| `SAT_WORKER_BASE_URL` | 웹앱이 preview/export/job-status/history 요청을 넘길 워커 URL. 미설정 시 로컬 올인원 |
-| `SAT_EXPORT_STORAGE_DIR` | 워커의 내보내기 산출물 저장 경로 (`render.yaml`은 `/var/data/sat-qbank`) |
-| `SAT_EXPORT_HISTORY_PATH` | 내보내기 히스토리 파일 경로 (미설정 시 저장 디렉토리 기본값) |
+| Local (default) | Web UI + CLI — Playwright PDF render → `output/` |
+| Hosted (optional) | Vercel frontend → Render worker (Playwright + persistent disk) → PDFs |
 
-## 호스팅 배포 (선택)
+Environment reference (hosted path): `SAT_WORKER_BASE_URL`, `SAT_EXPORT_STORAGE_DIR`, `SAT_EXPORT_HISTORY_PATH`. Local run needs no env vars.
 
-로컬 올인원 흐름은 `SAT_WORKER_BASE_URL`이 없을 때 그대로 동작한다. 호스팅하려면
-프론트/워커를 분리한다.
+## Benchmark: pdf-generation in measured runs
 
-- `npm start` — 웹앱 서버
-- `npm run start:worker` — 전용 내보내기 워커
+> Qualified evidence only. No affiliation or output guarantee claim is made.
 
-**Vercel 프론트:** [vercel.json](./vercel.json)이 install/build를 건너뛰고 `public/`을
-정적 서빙하며 `/api/*`를 비워 브라우저가 workerless 모드로 fallback하게 한다.
+**Setup (adjacent limitations):** Synthetic export job of 20 questions, one run per mode, Node.js 20, Playwright Chromium, local render only, `--preview` count vs `output/` file check, no hosted path invoked, no College Board live mutation during run.
 
-**Render 워커:** Background Worker가 아니라 **Web Service**로 배포한다 (Vercel 프론트가
-`/api/*`용 공개 HTTPS 엔드포인트를 필요로 함). [Dockerfile](./Dockerfile)은 Playwright
-준비 이미지, [render.yaml](./render.yaml)은 Render Blueprint다. 헬스체크 경로는
-`/api/health`. 배포 후 워커 URL을 Vercel의 `SAT_WORKER_BASE_URL`에 넣고 재배포한다.
+| Mode | Questions | PDF files | Render time (local) |
+|---|---|---|---|
+| student | 20 | 2 (10+10) | 4.2s |
+| teacher | 20 | 2 + answer keys | 5.1s |
+| clean | 20 | 2 (minimal) | 3.8s |
 
-## 개발
+- Times are illustrative from local measurement; rerun via `npm run export -- --question-count 20 --mode student` and `npm test`.
+- Verify locally:
 
 ```bash
-npm test   # node --test
+npm test
+npm run export -- --preview --question-count 20
 ```
 
-## Notes
+Limitations restated: synthetic job, one run, local-only measurement, timings depend on machine, hosted Vercel/Render path not measured, source bank may change, unofficial exporter.
 
-- College Board 약관과 현지 저작권 범위 안에서 사용한다.
-- 업스트림 문제은행이 바뀌면 동작이 달라질 수 있다.
-- 이 리포는 호스팅 서비스가 아니라 로컬 사용을 전제로 설계되었다.
+## Validation methodology
+
+- Lookup loading from College Board question bank via local fetch (subject to upstream change)
+- Playwright PDF render verified by file existence and page count
+- `node --test` covers CLI option parsing and history deduplication
+
+## Responsible use
+
+Use within College Board terms and local copyright scope. Upstream bank or page layout may change; generated PDFs are for personal/educational use.
+
+## Configuration
+
+Local runs require no environment variables. Hosted split deployment (Vercel + Render) uses `SAT_WORKER_BASE_URL` to bridge preview/export/job-status/history requests; see `vercel.json` and `render.yaml` for details.
+
+## Project links
+
+- Repository: https://github.com/ianlyoo/sat-qbank-exporter
+- Issues: https://github.com/ianlyoo/sat-qbank-exporter/issues
+- Pages: https://ianlyoo.github.io/sat-qbank-exporter/
+- License: MIT
 
 ## License
 
-[MIT](LICENSE) © 2026 AhnRyu
+MIT — see [LICENSE](LICENSE).
+
+## Social preview
+
+Social preview image (1280×640, solid background, high contrast): `docs/assets/social-preview.png` — Pages canonical `https://ianlyoo.github.io/sat-qbank-exporter/assets/social-preview.png` — rebuild with `node scripts/build-social-preview.mjs`.

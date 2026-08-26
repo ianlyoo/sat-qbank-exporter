@@ -1,0 +1,47 @@
+{
+  "@context": "https://doi.org/10.5438/crossref",
+  "@type": "SoftwareSourceCode",
+  "name": "sat-qbank-exporter",
+  "description": "Local-first SAT question bank exporter — generate PDFs via CLI with Vercel frontend and Render worker in offline-capable workflows.",
+  "version": "0.1.0",
+  "license": "https://spdx.org/licenses/MIT",
+  "codeRepository": "https://github.com/ianlyoo/sat-qbank-exporter",
+  "url": "https://github.com/ianlyoo/sat-qbank-exporter",
+  "homepage": "https://ianlyoo.github.io/sat-qbank-exporter/",
+  "issueTracker": "https://github.com/ianlyoo/sat-qbank-exporter/issues",
+  "author": [
+    {
+      "@type": "Person",
+      "givenName": "Ian",
+      "familyName": "Yoo",
+      "alternateName": "ianlyoo"
+    }
+  ],
+  "provider": {
+    "@type": "Person",
+    "givenName": "Ian",
+    "familyName": "Yoo",
+    "alternateName": "ianlyoo"
+  },
+  "programmingLanguage": "JavaScript",
+  "runtimePlatform": "Node.js >=20",
+  "keywords": [
+    "cli-tool",
+    "developer-tools",
+    "education",
+    "exporter",
+    "local-first",
+    "nodejs",
+    "pdf-generation",
+    "playwright",
+    "question-bank",
+    "render",
+    "sat",
+    "vercel"
+  ],
+  "applicationCategory": "developer-tools",
+  "operatingSystem": "Cross-platform",
+  "datePublished": "2026-08-26",
+  "dateCreated": "2026-08-26",
+  "isAccessibleForFree": true
+}
