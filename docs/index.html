@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>sat-qbank-exporter — Local-first SAT question bank exporter — generate PDFs via CLI with Vercel frontend and Render worker in offline-capable workflows.</title>
+<meta name="description" content="Local-first SAT question bank exporter — generate PDFs via CLI with Vercel frontend and Render worker in offline-capable workflows.">
+<link rel="canonical" href="https://ianlyoo.github.io/sat-qbank-exporter/">
+<meta property="og:type" content="website">
+<meta property="og:title" content="sat-qbank-exporter — Local-first SAT question bank exporter — generate PDFs via CLI with Vercel frontend and Render worker in offline-capable workflows.">
+<meta property="og:description" content="Local-first SAT question bank exporter — generate PDFs via CLI with Vercel frontend and Render worker in offline-capable workflows.">
+<meta property="og:url" content="https://ianlyoo.github.io/sat-qbank-exporter/">
+<meta property="og:image" content="https://ianlyoo.github.io/sat-qbank-exporter/assets/social-preview.png">
+<meta property="og:image:width" content="1280">
+<meta property="og:image:height" content="640">
+<meta property="og:image:type" content="image/png">
+<meta property="og:site_name" content="sat-qbank-exporter">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="sat-qbank-exporter — Local-first SAT question bank exporter — generate PDFs via CLI with Vercel frontend and Render worker in offline-capable workflows.">
+<meta name="twitter:description" content="Local-first SAT question bank exporter — generate PDFs via CLI with Vercel frontend and Render worker in offline-capable workflows.">
+<meta name="twitter:image" content="https://ianlyoo.github.io/sat-qbank-exporter/assets/social-preview.png">
+<meta name="twitter:url" content="https://ianlyoo.github.io/sat-qbank-exporter/">
+<meta name="author" content="ianlyoo">
+<meta name="robots" content="index, follow">
+<link rel="stylesheet" href="./styles.css">
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareSourceCode","name":"sat-qbank-exporter","description":"Local-first SAT question bank exporter — generate PDFs via CLI with Vercel frontend and Render worker in offline-capable workflows.","version":"0.1.0","codeRepository":"https://github.com/ianlyoo/sat-qbank-exporter","url":"https://ianlyoo.github.io/sat-qbank-exporter/","programmingLanguage":"JavaScript","license":"https://spdx.org/licenses/MIT","keywords":["cli-tool","developer-tools","education","exporter","local-first","nodejs","pdf-generation","playwright","question-bank","render","sat","vercel"],"author":{"@type":"Person","name":"ianlyoo"}}</script>
+</head>
+<body>
+<a class="skip-link" href="#main">Skip to content</a>
+<header role="banner">
+<div class="container">
+<h1>sat-qbank-exporter</h1>
+<p class="tagline">Local-first SAT question bank exporter — generate PDFs via CLI with Vercel frontend and Render worker in offline-capable workflows.</p>
+<nav aria-label="Primary">
+<ul>
+<li><a href="https://github.com/ianlyoo/sat-qbank-exporter">GitHub Repository</a></li>
+<li><a href="https://github.com/ianlyoo/sat-qbank-exporter/blob/main/README.md">README</a></li>
+<li><a href="https://github.com/ianlyoo/sat-qbank-exporter/issues">Issues</a></li>
+<li><a href="https://ianlyoo.github.io/sat-qbank-exporter/">Pages</a></li>
+</ul>
+</nav>
+<nav aria-label="Language">
+<ul>
+<li><a href="https://github.com/ianlyoo/sat-qbank-exporter/blob/main/README.md" lang="en">English</a> | <a href="https://github.com/ianlyoo/sat-qbank-exporter/blob/main/README.ko.md" lang="ko">한국어</a></li>
+</ul>
+</nav>
+</div>
+</header>
+<main id="main">
+<div class="container">
+<section aria-labelledby="overview-heading">
+<h2 id="overview-heading">Overview</h2>
+<p>Turn the College Board question bank into printable SAT practice sets. Pick assessment, section, domains, skills, difficulty, question count and batching rules, then render polished PDFs on your own machine. Local-first by default — no account, no hosting. An optional hosted path (Vercel frontend + Render worker) exists if you want it.</p>
+<ul>
+<li>Node.js 20+, Playwright Chromium PDF render</li>
+<li>Web UI + CLI (<code>batch_export.mjs</code>) — student / teacher / clean batches</li>
+<li>Double-click launcher — <code>launch.bat</code> (Windows) / <code>launch.command</code> (macOS)</li>
+</ul>
+<p>Not an official College Board project.</p>
+<p><a href="https://github.com/ianlyoo/sat-qbank-exporter/blob/main/README.md">README</a> — <a href="https://github.com/ianlyoo/sat-qbank-exporter">Repository</a> — <a href="https://github.com/ianlyoo/sat-qbank-exporter/issues">Issues</a> — <a href="https://ianlyoo.github.io/sat-qbank-exporter/">Pages canonical</a></p>
+</section>
+
+<section aria-labelledby="install-heading">
+<h2 id="install-heading">Quick start</h2>
+<p>Release build or local zip — double-click the launcher:</p>
+<ul>
+<li>Windows: <code>launch.bat</code></li>
+<li>macOS: <code>launch.command</code></li>
+</ul>
+<p>Or run manually:</p>
+<pre><code>npm install
+node node_modules/playwright/cli.js install chromium
+npm start
+# open http://localhost:4173</code></pre>
+<pre><code>npm run export -- \
+  --assessment "SAT" \
+  --section "Math" \
+  --domains "Algebra" \
+  --skills "Linear functions" \
+  --difficulty "Easy,Medium" \
+  --question-count 20 \
+  --chunk-size 10 \
+  --mode student \
+  --output ./output/math</code></pre>
+</section>
+
+<section aria-labelledby="architecture-heading">
+<h2 id="architecture-heading">Architecture</h2>
+<table>
+<thead><tr><th>Run shape</th><th>Path</th></tr></thead>
+<tbody>
+<tr><td>Local (default)</td><td>Web UI + CLI — Playwright PDF render → <code>output/</code></td></tr>
+<tr><td>Hosted (optional)</td><td>Vercel frontend → Render worker (Playwright + persistent disk) → PDFs</td></tr>
+</tbody>
+</table>
+</section>
+
+<section aria-labelledby="features-heading">
+<h2 id="features-heading">Features</h2>
+<ul>
+<li>Lookup loading from the College Board question bank</li>
+<li>Filters — section, domain, skill, difficulty, question count, batch size</li>
+<li>Preview before export</li>
+<li>Playwright-rendered PDFs — student / teacher / clean batches</li>
+<li>Optional explanations appended per batch</li>
+<li>Deduplication across machines</li>
+</ul>
+</section>
+
+<section aria-labelledby="links-heading">
+<h2 id="links-heading">Project links</h2>
+<ul>
+<li><a href="https://github.com/ianlyoo/sat-qbank-exporter">Repository: https://github.com/ianlyoo/sat-qbank-exporter</a></li>
+<li><a href="https://github.com/ianlyoo/sat-qbank-exporter/issues">Issues</a></li>
+<li><a href="https://ianlyoo.github.io/sat-qbank-exporter/">Pages canonical: https://ianlyoo.github.io/sat-qbank-exporter/</a></li>
+<li><a href="https://github.com/ianlyoo/sat-qbank-exporter/blob/main/LICENSE">License: MIT</a></li>
+<li><a href="https://github.com/ianlyoo/sat-qbank-exporter/blob/main/README.md">README</a></li>
+</ul>
+</section>
+
+<section aria-labelledby="license-heading">
+<h2 id="license-heading">License and ownership</h2>
+<p>Owner: <a href="https://github.com/ianlyoo">ianlyoo</a> — License: <a href="https://spdx.org/licenses/MIT">MIT</a> — Version: 0.1.0 — Language: JavaScript</p>
+<div class="limitations" role="note" aria-label="Limitations">
+<p><strong>Limitations:</strong> Unofficial exporter — not affiliated with College Board. Source bank or page layout may change. PDFs are generated locally via Playwright; first run downloads Chromium. Hosted path (Vercel + Render) is optional and requires your own deployment.</p>
+</div>
+</section>
+</div>
+</main>
+<footer role="contentinfo">
+<div class="container">
+<p>© 2026 ianlyoo — <a href="https://github.com/ianlyoo/sat-qbank-exporter">sat-qbank-exporter</a> — <a href="https://spdx.org/licenses/MIT">MIT</a> — <a href="https://ianlyoo.github.io/sat-qbank-exporter/sitemap.xml">Sitemap</a> — <a href="https://github.com/ianlyoo/sat-qbank-exporter/blob/main/README.md">README</a></p>
+</div>
+</footer>
+</body>
+</html>
