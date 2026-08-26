@@ -41,7 +41,7 @@ cd sat-qbank-exporter
 npm install
 node node_modules/playwright/cli.js install chromium
 npm start
-# open http://localhost:4173
+// open http://localhost:4173
 ```
 
 Launcher double-click also works: `launch.bat` (Windows) or `launch.command` (macOS). PDFs are stored in `output/` by default.
